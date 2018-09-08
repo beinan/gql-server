@@ -29,25 +29,25 @@ type stdLogger struct {
 }
 
 func (l *stdLogger) Debug(a ...interface{}) {
-	if l.level >= DEBUG {
+	if l.level <= DEBUG {
 		l.logger.Println(a...)
 	}
 }
 
 func (l *stdLogger) Info(a ...interface{}) {
-	if l.level >= INFO {
+	if l.level <= INFO {
 		l.logger.Println(a...)
 	}
 }
 
 func (l *stdLogger) Error(a ...interface{}) {
-	if l.level >= WARN {
+	if l.level <= WARN {
 		l.logger.Println(a...)
 	}
 }
 
 func (l *stdLogger) Warn(a ...interface{}) {
-	if l.level >= ERROR {
+	if l.level <= ERROR {
 		l.logger.Println(a...)
 	}
 }

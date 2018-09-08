@@ -1,0 +1,20 @@
+version: '3.3'
+
+services:
+  graphql:
+    build: .
+    ports:
+     - "8888"
+    environment:
+     - SERVICE_PORTS=8888
+     - APP_ENV
+    volumes:
+     - .:/go/src/github.com/beinan/gql-server
+  lb:
+    image: 'dockercloud/haproxy:latest'
+    links:
+     - graphql
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+     - '8080:80'

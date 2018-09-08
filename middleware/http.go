@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
@@ -19,18 +18,8 @@ type GQLResponse struct {
 	Error interface{} `json:"error"`
 }
 
-func GraphqlMiddleware(next Endpoint) Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		gqlRequest := request.(GQLRequest)
-		return GQLResponse{
-			Data:  gqlRequest,
-			Error: nil,
-		}, nil
-	}
-}
-
 func InitHttpHandler(logger logging.Logger) http.Handler {
-	return &httpHandler{logger, GraphqlMiddleware(nil)}
+	return &httpHandler{logger, GraphqlMiddleware(logger)(nil)}
 }
 
 type httpHandler struct {
@@ -40,7 +29,6 @@ type httpHandler struct {
 
 func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var gqlRequest GQLRequest
-	h.logger.Debug("Reqeust:", r)
 	if err := json.NewDecoder(r.Body).Decode(&gqlRequest); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
