@@ -42,7 +42,7 @@ func Generate(cfg GenConfig) error {
 }
 
 const modelTmpl = `
-package genmodel
+package gen
 
 import "github.com/beinan/gql-server/graphql"
 
@@ -85,14 +85,14 @@ func fieldTypePipe(field *ast.FieldDefinition) string {
 }
 
 func argsPipe(args ast.ArgumentDefinitionList) string {
-	result := "arg struct{ \n"
+	result := ""
 	for _, arg := range args {
 		if arg.DefaultValue != nil {
 			arg.Type.NonNull = true
 		}
-		result += arg.Name + " " + typeNamePipe(arg.Type) + "\n"
+		result += arg.Name + " " + typeNamePipe(arg.Type) + ","
 	}
-	result += "}"
+
 	return result
 }
 
@@ -157,6 +157,7 @@ type User {
 }
 type Query {
   getUser(id: ID!): User  
+  getUsers(start: Int=0, pageSize: Int = 20): [User!]
 }
 
 schema {

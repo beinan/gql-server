@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/beinan/gql-server/graphql"
 	"github.com/beinan/gql-server/logging"
 )
 
@@ -19,12 +20,12 @@ type GQLResponse struct {
 }
 
 func InitHttpHandler(logger logging.Logger) http.Handler {
-	return &httpHandler{logger, GraphqlMiddleware(logger)(nil)}
+	return &httpHandler{logger, CreateGraphqlService(logger)}
 }
 
 type httpHandler struct {
-	logger      logging.Logger
-	GQLEndpoint Endpoint
+	logger     logging.Logger
+	gqlService Service
 }
 
 func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +35,8 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.GQLEndpoint(r.Context(), gqlRequest)
+	ctx := graphql.MakeCtx(r.Context())
+	response, err := h.gqlService(ctx, gqlRequest).Value()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -1,5 +1,7 @@
 package graphql
 
+import "encoding/json"
+
 type IntOption interface {
 	Get() int
 	IsSet() bool
@@ -78,4 +80,11 @@ func (o stringOptionStruct) GetOrElse(v string) string {
 
 func (o stringOptionStruct) IsSet() bool {
 	return o.isSet
+}
+
+func (o stringOptionStruct) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.value)
+	}
+	return json.Marshal(nil)
 }

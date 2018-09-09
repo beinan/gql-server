@@ -1,0 +1,4 @@
+package gen
+
+func Resolve() {
+}

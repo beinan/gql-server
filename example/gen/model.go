@@ -1,4 +1,4 @@
-package genmodel
+package gen
 
 import "github.com/beinan/gql-server/graphql"
 
@@ -12,14 +12,11 @@ type User struct {
 
 	Name StringOption
 
-	Friends func(ctx Context, arg struct {
-		start    int
-		pageSize int
-	}) ([]User, error)
+	Friends func(ctx Context, start int, pageSize int) ([]User, error)
 }
 
 type Query struct {
-	GetUser func(ctx Context, arg struct {
-		id ID
-	}) (*User, error)
+	GetUser func(ctx Context, id ID) (*User, error)
+
+	GetUsers func(ctx Context, start int, pageSize int) ([]User, error)
 }
