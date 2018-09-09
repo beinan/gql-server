@@ -44,6 +44,13 @@ func Generate(cfg GenConfig) error {
 const modelTmpl = `
 package genmodel
 
+import "github.com/beinan/gql-server/graphql"
+
+type ID = string
+type StringOption = graphql.StringOption
+
+type Context = graphql.Context
+
 {{range .Definitions}}
 type {{.Name}} struct {
   {{range .Fields}}
@@ -70,7 +77,7 @@ func generateModel(doc *ast.SchemaDocument) string {
 func fieldTypePipe(field *ast.FieldDefinition) string {
 	if len(field.Arguments) > 0 {
 		//generate a function type
-		return "func(ctx context.Context," + argsPipe(field.Arguments) + ") (" +
+		return "func(ctx Context," + argsPipe(field.Arguments) + ") (" +
 			typeNamePipe(field.Type) + ", error)"
 	} else {
 		return typeNamePipe(field.Type)
@@ -80,6 +87,9 @@ func fieldTypePipe(field *ast.FieldDefinition) string {
 func argsPipe(args ast.ArgumentDefinitionList) string {
 	result := "arg struct{ \n"
 	for _, arg := range args {
+		if arg.DefaultValue != nil {
+			arg.Type.NonNull = true
+		}
 		result += arg.Name + " " + typeNamePipe(arg.Type) + "\n"
 	}
 	result += "}"
@@ -92,7 +102,7 @@ func typeNamePipe(t *ast.Type) string {
 		return goTypeNamePipe(t.NamedType, t.NonNull)
 	} else {
 		// array type
-		return "[]" + goTypeNamePipe(t.NamedType, t.NonNull)
+		return "[]" + typeNamePipe(t.Elem)
 	}
 }
 
@@ -143,6 +153,7 @@ func loadSchema(path string) string {
 type User {
   id: ID!
   name: String
+  friends(start: Int = 0, pageSize:Int = 20): [User!]
 }
 type Query {
   getUser(id: ID!): User  
