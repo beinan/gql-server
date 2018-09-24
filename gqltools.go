@@ -5,12 +5,17 @@ import (
 	"log"
 	"os"
 
+	"github.com/beinan/gql-server/codegen"
 	"github.com/urfave/cli"
 )
 
 func main() {
 	app := cli.NewApp()
-
+	app.Name = "gqltools"
+	config := codegen.GenConfig{
+		SchemaPath: "./schema",
+		GenPath:    "./gen",
+	}
 	app.Commands = []cli.Command{
 		{
 			Name:    "init",
@@ -25,11 +30,33 @@ func main() {
 			Name:    "gen",
 			Aliases: []string{"g"},
 			Usage:   "Generate models, resolvers and graphql server code",
-			Action: func(c *cli.Context) error {
-
-				return nil
-			},
-		},
+			Subcommands: []cli.Command{
+				{
+					Name:    "model",
+					Aliases: []string{"m"},
+					Usage:   "generate models",
+					Action: func(c *cli.Context) error {
+						codegen.GenerateModel(config, os.Stdout)
+						return nil
+					},
+				},
+				{
+					Name:    "resolver",
+					Aliases: []string{"r"},
+					Usage:   "generate resolvers",
+					Action: func(c *cli.Context) error {
+						codegen.GenerateResolver(config, os.Stdout)
+						return nil
+					},
+				},
+				{
+					Name:  "mock",
+					Usage: "generate mocks",
+					Action: func(c *cli.Context) error {
+						return nil
+					},
+				},
+			}},
 	}
 
 	err := app.Run(os.Args)

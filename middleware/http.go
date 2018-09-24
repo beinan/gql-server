@@ -19,8 +19,8 @@ type GQLResponse struct {
 	Error interface{} `json:"error"`
 }
 
-func InitHttpHandler(logger logging.Logger) http.Handler {
-	return &httpHandler{logger, CreateGraphqlService(logger)}
+func InitHttpHandler(logger logging.Logger, rootQueryResolver Resolver) http.Handler {
+	return &httpHandler{logger, CreateGraphqlService(logger, rootQueryResolver)}
 }
 
 type httpHandler struct {
@@ -34,6 +34,7 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	h.logger.Debug("get request")
 
 	ctx := graphql.MakeCtx(r.Context())
 	response, err := h.gqlService(ctx, gqlRequest).Value()

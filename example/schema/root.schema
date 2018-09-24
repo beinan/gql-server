@@ -1,0 +1,13 @@
+type User {
+  id: ID!
+  name: String
+  friends(start: Int = 0, pageSize:Int = 20): [User!]
+}
+type Query {
+  getUser(id: ID!): User  
+  getUsers(start: Int=0, pageSize: Int = 20): [User!]
+}
+
+schema {
+  query: Query
+}
