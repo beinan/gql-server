@@ -1,6 +1,7 @@
 package future
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -16,7 +17,7 @@ func generateProducer(t *testing.T, value interface{}, err error) func() (interf
 }
 
 func TestFutureValue(t *testing.T) {
-	producer := generateProducer(t, 3, nil)
+	producer := generateProducer(t, 3, nil) //3 is the expected result
 	fv := MakeFuture(producer)
 	result, err := fv.Value()
 	if result != 3 {
@@ -24,6 +25,39 @@ func TestFutureValue(t *testing.T) {
 	}
 	if err != nil {
 		t.Fatalf("Returned error is not nil: %v", err)
+	}
+}
+
+func TestCancellableFutureValue(t *testing.T) {
+	producer := generateProducer(t, 3, nil) //3 is the future result
+	fv := MakeFuture(producer)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	go func() {
+		time.Sleep(time.Duration(300 * time.Microsecond))
+		cancel() //cancel context in another goroutine
+	}()
+	result, err := fv.CancellableValue(ctx)
+	if result != nil {
+		t.Fatalf("Returned value should be nil for cancelled future, but actual: %v", result)
+	}
+	if err != context.Canceled {
+		t.Fatalf("Returned error should be context cancelled, but actual: %v", err)
+	}
+}
+
+func TestFutureValueCancelledByCtxTimeout(t *testing.T) {
+	producer := generateProducer(t, 3, nil) //3 is the future result
+	fv := MakeFuture(producer)
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 300*time.Microsecond)
+	defer cancel()
+	result, err := fv.CancellableValue(ctx)
+	if result != nil {
+		t.Fatalf("Returned value should be nil for cancelled future, but actual: %v", result)
+	}
+	if err != context.DeadlineExceeded {
+		t.Fatalf("Returned error should be context cancelled, but actual: %v", err)
 	}
 }
 

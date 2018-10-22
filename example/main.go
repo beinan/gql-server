@@ -3,17 +3,21 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/beinan/gql-server/example/gen"
 	"github.com/beinan/gql-server/graphql"
 	"github.com/beinan/gql-server/logging"
 	"github.com/beinan/gql-server/middleware"
+	"github.com/opentracing/opentracing-go/log"
 )
 
 //go:generate sh -c "gql-server gen model > ./gen/model.go"
 //go:generate sh -c "gql-server gen resolver > ./gen/resolver.go"
 func main() {
 	var logger = logging.StandardLogger(logging.DEBUG)
+	defer logging.InitOpenTracing("gql-service").Close()
+
 	logger.Debug("server starting...")
 
 	rootQueryResolver := gen.QueryResolver{Data: query}
@@ -27,35 +31,49 @@ type User = gen.User
 type Query = gen.Query
 type Context = graphql.Context
 
-var query = &gen.Query{
-	GetUser: func(ctx Context, id ID) (*User, error) {
-		fmt.Println("exec getUser")
+var db = make(map[string]*User)
+var friendDB = make(map[string][]string)
+
+func init() {
+	makeTestUser := func(id string) *User {
 		return &User{
 			Id:      id,
-			Name:    graphql.NewStringOption("Name of " + id),
+			Name:    graphql.NewStringOption("User_" + id),
 			Friends: UserFriends(id),
-		}, nil
+		}
+	}
+	db["1"] = makeTestUser("1")
+	db["2"] = makeTestUser("2")
+	db["3"] = makeTestUser("3")
+	friendDB["1"] = []string{"2", "3"}
+	friendDB["2"] = []string{"1", "3"}
+}
+
+func getUser(ctx Context, id string) *User {
+	span, ctx := ctx.StartSpanFromContext("read_user_from_db")
+	span.LogFields(
+		log.String("id", id),
+	)
+
+	defer span.Finish()
+	time.Sleep(10 * time.Millisecond)
+	return db[id]
+}
+
+var query = &gen.Query{
+	GetUser: func(ctx Context, id ID) (*User, error) {
+		fmt.Println("get user:" + id)
+		return getUser(ctx, id), nil
 	},
 }
 
 func UserFriends(userId ID) func(Context, int64, int64) ([]*User, error) {
 	return func(ctx Context, start int64, pageSize int64) ([]*User, error) {
-		fmt.Println("exec friends")
-		var user1 = &User{
-			Id:      "1",
-			Name:    graphql.NewStringOption("bbbb"),
-			Friends: UserFriends("1"),
+		ids := friendDB[userId]
+		users := make([]*User, len(ids))
+		for i, id := range ids {
+			users[i] = getUser(ctx, id)
 		}
-
-		var user2 = &User{
-			Id:      "2",
-			Name:    graphql.NewStringOption("aaaa"),
-			Friends: UserFriends("2"),
-		}
-
-		return []*User{
-			user1,
-			user2,
-		}, nil
+		return users, nil
 	}
 }

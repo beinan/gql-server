@@ -1,9 +1,13 @@
 package future
 
-import "encoding/json"
+import (
+	"context"
+	"encoding/json"
+)
 
 type Future interface {
 	Value() (interface{}, error)
+	CancellableValue(context.Context) (interface{}, error)
 	Then(func(interface{}, error) (interface{}, error)) Future
 	OnSuccess(func(interface{})) Future
 	OnFailure(func(error)) Future
@@ -15,7 +19,7 @@ func MakeFuture(producer func() (interface{}, error)) Future {
 	}
 	go func() {
 		fv.value, fv.err = producer()
-		close(fv.done) //notify all the waiting/running Value() goroutine
+		close(fv.done) //notify all the waiting/running Value()
 	}()
 	return fv
 }
@@ -39,6 +43,15 @@ type futureImpl struct {
 func (fv *futureImpl) Value() (interface{}, error) {
 	<-fv.done //waiting for the result
 	return fv.value, fv.err
+}
+
+func (fv *futureImpl) CancellableValue(ctx context.Context) (interface{}, error) {
+	select {
+	case <-fv.done:
+		return fv.value, fv.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 func (fv *futureImpl) OnSuccess(f func(interface{})) Future {

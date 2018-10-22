@@ -41,6 +41,9 @@ func (r {{.Name}}Resolver) ResolveQueryField(
        return future.MakeValue(r.Data.{{.Name | titlePipe}}, nil)
     {{else}}
        //for future resolver value
+       span, ctx := ctx.StartSpanFromContext("{{.Name}}")
+       defer span.Finish()
+
        fu := future.MakeFuture(func() (interface{}, error) {
          {{range .Arguments}}
 			     {{.Name}}Value, _ := field.Arguments.ForName("{{.Name}}").Value.Value(nil)
@@ -53,8 +56,10 @@ func (r {{.Name}}Resolver) ResolveQueryField(
             values := data.([]*{{.Type.Elem.NamedType}}) //array of elememnt type
             results := make([]map[string]future.Future, len(values))
             for i, value := range values {
+              span, ctx := ctx.StartSpanFromContext("{{.Type.Elem.NamedType}}")
               valueResolver := {{.Type.Elem.NamedType}}Resolver{value}
               results[i] = middleware.ResolveSelections(ctx, field.SelectionSet, valueResolver)
+              span.Finish()
             }
             return future.MakeValue(results, nil), nil
           })

@@ -34,9 +34,13 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	h.logger.Debug("get request")
 
 	ctx := graphql.MakeCtx(r.Context())
+	span, ctx := ctx.StartSpanFromContext("http_request")
+	defer span.Finish()
+
 	response, err := h.gqlService(ctx, gqlRequest).Value()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

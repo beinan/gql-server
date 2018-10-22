@@ -27,6 +27,8 @@ func (r UserResolver) ResolveQueryField(
 		return future.MakeValue(r.Data.Name, nil)
 
 	case "friends":
+		span, ctx := ctx.StartSpanFromContext("friends")
+		defer span.Finish()
 
 		//for future resolver value
 		fu := future.MakeFuture(func() (interface{}, error) {
@@ -43,8 +45,12 @@ func (r UserResolver) ResolveQueryField(
 			values := data.([]*User) //array of elememnt type
 			results := make([]map[string]future.Future, len(values))
 			for i, value := range values {
+				span, ctx := ctx.StartSpanFromContext("User")
+
 				valueResolver := UserResolver{value}
 				results[i] = middleware.ResolveSelections(ctx, field.SelectionSet, valueResolver)
+				span.Finish()
+
 			}
 			return future.MakeValue(results, nil), nil
 		})
@@ -65,6 +71,8 @@ func (r QueryResolver) ResolveQueryField(
 	switch field.Name {
 
 	case "getUser":
+		span, ctx := ctx.StartSpanFromContext("getUser")
+		defer span.Finish()
 
 		//for future resolver value
 		fu := future.MakeFuture(func() (interface{}, error) {
@@ -83,6 +91,8 @@ func (r QueryResolver) ResolveQueryField(
 		})
 
 	case "getUsers":
+		span, ctx := ctx.StartSpanFromContext("getUsers")
+		defer span.Finish()
 
 		//for future resolver value
 		fu := future.MakeFuture(func() (interface{}, error) {

@@ -1,6 +1,10 @@
 package graphql
 
-import "context"
+import (
+	"context"
+
+	opentracing "github.com/opentracing/opentracing-go"
+)
 
 func MakeCtx(ctx context.Context) Context {
 	return Context{
@@ -10,4 +14,9 @@ func MakeCtx(ctx context.Context) Context {
 
 type Context struct {
 	ctx context.Context
+}
+
+func (c Context) StartSpanFromContext(name string) (opentracing.Span, Context) {
+	span, newCtx := opentracing.StartSpanFromContext(c.ctx, name)
+	return span, Context{ctx: newCtx}
 }
