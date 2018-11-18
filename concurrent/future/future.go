@@ -5,15 +5,17 @@ import (
 	"encoding/json"
 )
 
+type Value = interface{}
+
 type Future interface {
-	Value() (interface{}, error)
-	CancellableValue(context.Context) (interface{}, error)
-	Then(func(interface{}, error) (interface{}, error)) Future
-	OnSuccess(func(interface{})) Future
+	Value() (Value, error)
+	CancellableValue(context.Context) (Value, error)
+	Then(func(Value, error) (Value, error)) Future
+	OnSuccess(func(Value)) Future
 	OnFailure(func(error)) Future
 }
 
-func MakeFuture(producer func() (interface{}, error)) Future {
+func MakeFuture(producer func() (Value, error)) Future {
 	fv := &futureImpl{
 		done: make(chan struct{}),
 	}
@@ -24,7 +26,7 @@ func MakeFuture(producer func() (interface{}, error)) Future {
 	return fv
 }
 
-func MakeValue(value interface{}, err error) Future {
+func MakeValue(value Value, err error) Future {
 	done := make(chan struct{})
 	defer close(done)
 	return &futureImpl{
@@ -35,17 +37,17 @@ func MakeValue(value interface{}, err error) Future {
 }
 
 type futureImpl struct {
-	value interface{}
+	value Value
 	err   error
 	done  chan struct{} //ignore the value in chan
 }
 
-func (fv *futureImpl) Value() (interface{}, error) {
+func (fv *futureImpl) Value() (Value, error) {
 	<-fv.done //waiting for the result
 	return fv.value, fv.err
 }
 
-func (fv *futureImpl) CancellableValue(ctx context.Context) (interface{}, error) {
+func (fv *futureImpl) CancellableValue(ctx context.Context) (Value, error) {
 	select {
 	case <-fv.done:
 		return fv.value, fv.err
@@ -54,7 +56,7 @@ func (fv *futureImpl) CancellableValue(ctx context.Context) (interface{}, error)
 	}
 }
 
-func (fv *futureImpl) OnSuccess(f func(interface{})) Future {
+func (fv *futureImpl) OnSuccess(f func(Value)) Future {
 	go func() {
 		<-fv.done
 		if fv.err == nil {
@@ -74,8 +76,8 @@ func (fv *futureImpl) OnFailure(f func(error)) Future {
 	return fv //returns a chained future
 }
 
-func (fv *futureImpl) Then(f func(interface{}, error) (interface{}, error)) Future {
-	return MakeFuture(func() (interface{}, error) {
+func (fv *futureImpl) Then(f func(Value, error) (Value, error)) Future {
+	return MakeFuture(func() (Value, error) {
 		<-fv.done
 		v, err := f(fv.value, fv.err)
 		return v, err
