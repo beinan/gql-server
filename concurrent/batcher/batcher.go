@@ -10,6 +10,7 @@ import (
 )
 
 const MaxBatchSize = 20
+const BatchInterval = 3 * time.Millisecond
 
 type ID = string
 type Context = context.Context
@@ -77,7 +78,7 @@ func (b *Batcher) startBatcher() {
 				go b.callBatchFunc(ids, responses)
 				reset()
 			}
-		case <-time.After(3 * time.Millisecond):
+		case <-time.After(BatchInterval):
 			go b.callBatchFunc(ids, responses)
 			reset()
 		case <-b.ctx.Done():

@@ -22,13 +22,15 @@ type MockedData struct {
 
 func (dao *MockedDAO) GetByIds(ctx Context, ids []ID) []Result {
 	dao.mutex.Lock()
-	defer dao.mutex.Unlock()
 	fmt.Println("calling GetBytIds", ids)
 	dao.batchCounter++
-	time.Sleep(time.Duration(10 * time.Millisecond))
+	dao.mutex.Unlock()
+	time.Sleep(time.Duration(2 * BatchInterval))
 	results := make([]Result, len(ids))
 	for i, id := range ids {
+		dao.mutex.Lock()
 		dao.idCounter++
+		dao.mutex.Unlock()
 		results[i] = Result{
 			Value: MockedData{
 				id:   id,
@@ -68,11 +70,12 @@ func TestBatcherMoreBatches(t *testing.T) {
 	getById := manager.Register(dao.GetByIds)
 	ctx := context.Background()
 	ctx = manager.Attach(ctx)
+
 	for i := 0; i < MaxBatchSize; i++ {
 		getById(ctx, strconv.Itoa(i))
 	}
 	getById(ctx, "OneExtraID")
-	time.Sleep(time.Duration(50 * time.Millisecond))
+	time.Sleep(time.Duration(10 * BatchInterval))
 
 	//should be in two batch
 	if dao.batchCounter != 2 {
