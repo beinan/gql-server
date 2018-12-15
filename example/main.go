@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -29,7 +30,7 @@ type ID = string
 type StringOption = graphql.StringOption
 type User = gen.User
 type Query = gen.Query
-type Context = graphql.Context
+type Context = context.Context
 
 var db = make(map[string]*User)
 var friendDB = make(map[string][]string)
@@ -50,7 +51,7 @@ func init() {
 }
 
 func getUser(ctx Context, id string) *User {
-	span, ctx := ctx.StartSpanFromContext("read_user_from_db")
+	span, ctx := logging.StartSpanFromContext(ctx, "read_user_from_db")
 	span.LogFields(
 		log.String("id", id),
 	)

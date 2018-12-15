@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/beinan/gql-server/graphql"
 	"github.com/beinan/gql-server/logging"
 )
 
@@ -37,8 +36,8 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Debug("get request")
 
-	ctx := graphql.MakeCtx(r.Context())
-	span, ctx := ctx.StartSpanFromContext("http_request")
+	ctx := r.Context()
+	span, ctx := logging.StartSpanFromContext(ctx, "http_request")
 	defer span.Finish()
 
 	response, err := h.gqlService(ctx, gqlRequest).Value()

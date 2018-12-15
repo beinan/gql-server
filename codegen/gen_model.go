@@ -22,12 +22,13 @@ const modelTmpl = `
 //DO NOT EDIT
 package gen
 
+import "context"
 import "github.com/beinan/gql-server/graphql"
 
 type ID = string
 type StringOption = graphql.StringOption
 
-type Context = graphql.Context
+type Context = context.Context
 
 {{range .Definitions}}
 type {{.Name}} struct {

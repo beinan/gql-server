@@ -1,18 +1,20 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/beinan/gql-server/concurrent/future"
-	"github.com/beinan/gql-server/graphql"
 	"github.com/beinan/gql-server/logging"
 	"github.com/vektah/gqlparser/ast"
 	"github.com/vektah/gqlparser/parser"
 )
 
+type Context = context.Context
+
 type Resolver interface {
-	ResolveQueryField(graphql.Context, *ast.Field) future.Future
+	ResolveQueryField(Context, *ast.Field) future.Future
 }
 type graphqlService struct {
 	logger            logging.Logger
@@ -26,7 +28,7 @@ func CreateGraphqlService(logger logging.Logger, rootQueryResolver Resolver) Ser
 	}.serve
 }
 
-func (g graphqlService) serve(ctx graphql.Context, request interface{}) future.Future {
+func (g graphqlService) serve(ctx Context, request interface{}) future.Future {
 	gqlRequest := request.(GQLRequest)
 	doc, err := parser.ParseQuery(&ast.Source{Input: gqlRequest.Query})
 	results := make(map[string]future.Future)
@@ -47,7 +49,7 @@ func (g graphqlService) serve(ctx graphql.Context, request interface{}) future.F
 }
 
 func ResolveSelections(
-	ctx graphql.Context,
+	ctx Context,
 	sels ast.SelectionSet,
 	resolver Resolver,
 ) map[string]future.Future {

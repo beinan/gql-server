@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"context"
 	"io"
 
 	"github.com/opentracing/opentracing-go"
@@ -30,4 +31,9 @@ func initJaegerTracer(serviceName string) (opentracing.Tracer, io.Closer, error)
 		},
 	}
 	return cfg.NewTracer()
+}
+
+func StartSpanFromContext(
+	ctx context.Context, name string) (opentracing.Span, context.Context) {
+	return opentracing.StartSpanFromContext(ctx, name)
 }

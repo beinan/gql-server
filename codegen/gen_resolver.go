@@ -22,6 +22,7 @@ package gen
 
 import "github.com/beinan/gql-server/concurrent/future"
 import "github.com/beinan/gql-server/graphql"
+import "github.com/beinan/gql-server/logging"
 import "github.com/beinan/gql-server/middleware"
 
 {{range .Definitions}}
@@ -30,7 +31,7 @@ type {{.Name}}Resolver struct {
 }
 
 func (r {{.Name}}Resolver) ResolveQueryField(
-	ctx graphql.Context,
+	ctx Context,
 	field *graphql.Field,
 ) future.Future {
 	switch field.Name {
@@ -40,8 +41,8 @@ func (r {{.Name}}Resolver) ResolveQueryField(
        //for immediate value
        return future.MakeValue(r.Data.{{.Name | titlePipe}}, nil)
     {{else}}
-       //for future resolver value
-       span, ctx := ctx.StartSpanFromContext("{{.Name}}")
+      //for future resolver value
+       span, ctx := logging.StartSpanFromContext(ctx, "{{.Name}}")
        defer span.Finish()
 
        fu := future.MakeFuture(func() (interface{}, error) {
@@ -56,7 +57,7 @@ func (r {{.Name}}Resolver) ResolveQueryField(
             values := data.([]*{{.Type.Elem.NamedType}}) //array of elememnt type
             results := make([]map[string]future.Future, len(values))
             for i, value := range values {
-              span, ctx := ctx.StartSpanFromContext("{{.Type.Elem.NamedType}}")
+              span, ctx := logging.StartSpanFromContext(ctx, "{{.Type.Elem.NamedType}}")
               valueResolver := {{.Type.Elem.NamedType}}Resolver{value}
               results[i] = middleware.ResolveSelections(ctx, field.SelectionSet, valueResolver)
               span.Finish()
