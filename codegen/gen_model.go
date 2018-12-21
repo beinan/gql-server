@@ -22,27 +22,59 @@ const modelTmpl = `
 //DO NOT EDIT
 package gen
 
-import "context"
-import "github.com/beinan/gql-server/graphql"
+import (
+	"errors"
+
+	"github.com/beinan/gql-server/concurrent/future"
+	"github.com/beinan/gql-server/graphql"
+	. "github.com/beinan/gql-server/resolver"
+)
 
 type ID = string
 type StringOption = graphql.StringOption
 
-type Context = context.Context
+type Future = future.Future
 
 {{range .Definitions}}
 type {{.Name}} struct {
   {{range .Fields}}
-    {{.Name | titlePipe}} {{.| fieldTypePipe}}
+    {{if .Type | isImmediate}}
+      {{.Name | titlePipe}} {{.| fieldTypePipe}}
+    {{end}}
   {{end}}
 }
+type {{.Name}}Resolver interface {
+  {{range .Fields}}
+      {{.Name | titlePipe}}({{.| argumentPipe}}) Future
+  {{end}}
+}
+
+type Default{{.Name}}Resolver struct {
+	Value future.Future // future of {{.Name}}
+}
+
+{{$typename := .Name}}
+{{range .Fields}}
+func (this Default{{$typename}}Resolver) {{.Name | titlePipe}}({{.| argumentPipe}}) Future {
+  {{if .Type | isImmediate}}
+    return this.Value.Then(func(value Value) (Value, error) {
+		  data := value.({{$typename}})
+		  return data.{{.Name | titlePipe}}, nil
+	  })
+  {{else}}
+    return future.MakeValue(nil, errors.New("{{.Name | titlePipe}} not implemented"))
+  {{end}}
+}
+{{end}}
 {{end}}
 `
 
 func executeModelTmpl(doc *ast.SchemaDocument) []byte {
 	funcMap := template.FuncMap{
 		"fieldTypePipe": fieldTypePipe,
+		"argumentPipe":  argumentPipe,
 		"titlePipe":     strings.Title,
+		"isImmediate":   isImmediate,
 	}
 	tmpl, err := template.New("model").Funcs(funcMap).Parse(modelTmpl)
 	if err != nil {
@@ -53,9 +85,18 @@ func executeModelTmpl(doc *ast.SchemaDocument) []byte {
 	return buf.Bytes()
 }
 
+func argumentPipe(field *ast.FieldDefinition) string {
+	if len(field.Arguments) > 0 {
+		//exist arguments, so generate a function type
+		return "ctx Context," + argsPipe(field.Arguments)
+	} else {
+		return ""
+	}
+}
+
 func fieldTypePipe(field *ast.FieldDefinition) string {
 	if len(field.Arguments) > 0 {
-		//generate a function type
+		//exist arguments, so generate a function type
 		return "func(ctx Context," + argsPipe(field.Arguments) + ") (" +
 			typeNamePipe(field.Type) + ", error)"
 	} else {

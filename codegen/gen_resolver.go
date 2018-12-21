@@ -9,6 +9,7 @@ import (
 	"github.com/vektah/gqlparser/ast"
 )
 
+//gen resolver's functions
 func GenerateResolver(cfg GenConfig, w io.Writer) error {
 	return generate(
 		cfg, w, executeResolverTmpl,
@@ -20,64 +21,81 @@ const resolverTmpl = `
 //DO NOT EDIT
 package gen
 
-import "github.com/beinan/gql-server/concurrent/future"
-import "github.com/beinan/gql-server/graphql"
-import "github.com/beinan/gql-server/logging"
-import "github.com/beinan/gql-server/middleware"
+
+import (
+	"github.com/beinan/gql-server/concurrent/future"
+	"github.com/beinan/gql-server/graphql"
+	"github.com/beinan/gql-server/logging"
+	. "github.com/beinan/gql-server/resolver"
+	"github.com/vektah/gqlparser/ast"
+)
 
 {{range .Definitions}}
-type {{.Name}}Resolver struct {
-  Data *{{.Name}}
-}
 
-func (r {{.Name}}Resolver) ResolveQueryField(
-	ctx Context,
-	field *graphql.Field,
-) future.Future {
-	switch field.Name {
-  {{range .Fields}}
-    case "{{.Name}}":
-    {{if .Type | isImmediate}}
+
+{{$typename := .Name}}
+
+func Gql{{$typename}}Resolver(r {{$typename}}Resolver) FieldResolver {
+	return func(
+		ctx Context,
+		field *graphql.Field,
+	) future.Future {
+	  switch field.Name {
+    {{range .Fields}}
+      case "{{.Name}}":
+      {{if .Type | isImmediate}}
        //for immediate value
-       return future.MakeValue(r.Data.{{.Name | titlePipe}}, nil)
+       return r.{{.Name | titlePipe}}()
     {{else}}
-      //for future resolver value
-       span, ctx := logging.StartSpanFromContext(ctx, "{{.Name}}")
+      //for field with parameters 
+       span, ctx := logging.StartSpanFromContext(ctx, "{{$typename}} -- {{.Name}}")
        defer span.Finish()
 
-       fu := future.MakeFuture(func() (interface{}, error) {
-         {{range .Arguments}}
-			     {{.Name}}Value, _ := field.Arguments.ForName("{{.Name}}").Value.Value(nil)
-			   {{end}}
-         return r.Data.{{.Name | titlePipe}}(ctx, {{range .Arguments}}{{.Name}}Value.({{. | argTypePipe}}),{{end}})
-		   }) 
+       {{range .Arguments}}
+			   {{.Name}}Value, _ := field.Arguments.ForName("{{.Name}}").Value.Value(nil)
+			 {{end}}
+       fu := r.{{.Name | titlePipe}}(ctx, {{range .Arguments}}{{.Name}}Value.({{. | argTypePipe}}),{{end}})
+		   
        {{if eq .Type.NamedType ""}}
           //if it's array, resolver each element
-          return fu.Then(func(data interface{}, err error) (interface{}, error){
-            values := data.([]*{{.Type.Elem.NamedType}}) //array of elememnt type
-            results := make([]map[string]future.Future, len(values))
-            for i, value := range values {
-              span, ctx := logging.StartSpanFromContext(ctx, "{{.Type.Elem.NamedType}}")
-              valueResolver := {{.Type.Elem.NamedType}}Resolver{value}
-              results[i] = middleware.ResolveSelections(ctx, field.SelectionSet, valueResolver)
-              span.Finish()
-            }
-            return future.MakeValue(results, nil), nil
-          })
+    			return HandleFuture{{.Type.Elem.NamedType}}ResolverArray(ctx, fu, field.SelectionSet)
        {{else}}
-          //not array
-          return fu.Then(func(data interface{}, err error) (interface{}, error){
-            value := data.(*{{.Type.NamedType}})
-            valueResolver := {{.Type.NamedType}}Resolver{value}
-            result := middleware.ResolveSelections(ctx, field.SelectionSet, valueResolver)
-            return result, nil
-          })
+          //not array, using NamedType of the return type
+          return HandleFuture{{.Type.NamedType}}Resolver(ctx, fu, field.SelectionSet)
        {{end}}
     {{end}}
   {{end}}
 	default:
 		panic("unsopported field")
 	}
+  }
+}
+
+func HandleFuture{{$typename}}Resolver(
+	ctx Context,
+	futureResolver Future,
+	sels ast.SelectionSet,
+) Future {
+	return futureResolver.Then(func(data Value) (Value, error) {
+		resolver := data.({{$typename}}Resolver)
+		result := ResolveSelections(ctx, sels, Gql{{$typename}}Resolver(resolver))
+		return result, nil
+	})
+}
+
+func HandleFuture{{$typename}}ResolverArray(
+	ctx Context,
+	futureResolverArray Future,
+	sels ast.SelectionSet,
+) Future {
+	return futureResolverArray.Then(func(data Value) (Value, error) {
+		resolverArray := data.([]{{$typename}}Resolver)
+		results := make([]Results, len(resolverArray))
+		for i, resolver := range resolverArray {
+			results[i] = ResolveSelections(ctx, sels, Gql{{$typename}}Resolver(resolver))
+		}
+		return results, nil
+	})
 }
 {{end}}
 

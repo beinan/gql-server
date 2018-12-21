@@ -10,7 +10,7 @@ type Value = interface{}
 type Future interface {
 	Value() (Value, error)
 	CancellableValue(context.Context) (Value, error)
-	Then(func(Value, error) (Value, error)) Future
+	Then(func(Value) (Value, error)) Future
 	OnSuccess(func(Value)) Future
 	OnFailure(func(error)) Future
 }
@@ -76,10 +76,13 @@ func (fv *futureImpl) OnFailure(f func(error)) Future {
 	return fv //returns a chained future
 }
 
-func (fv *futureImpl) Then(f func(Value, error) (Value, error)) Future {
+func (fv *futureImpl) Then(f func(Value) (Value, error)) Future {
 	return MakeFuture(func() (Value, error) {
 		<-fv.done
-		v, err := f(fv.value, fv.err)
+		if fv.err != nil {
+			return nil, fv.err
+		}
+		v, err := f(fv.value)
 		return v, err
 	})
 }

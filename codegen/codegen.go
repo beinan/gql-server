@@ -33,6 +33,7 @@ func generate(
 		return err
 	}
 	rawCodeBytes := execTmpl(doc)
+	//fmt.Println(string(rawCodeBytes))
 	fset := token.NewFileSet()
 	astNodes, goerr := goparser.ParseFile(fset, "ignore", rawCodeBytes, goparser.ParseComments)
 	if goerr != nil {

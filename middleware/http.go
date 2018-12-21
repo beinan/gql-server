@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/beinan/gql-server/logging"
+	"github.com/beinan/gql-server/resolver"
 )
 
 type GQLRequest struct {
@@ -18,7 +19,7 @@ type GQLResponse struct {
 	Error interface{} `json:"error"`
 }
 
-func InitHttpHandler(logger logging.Logger, rootQueryResolver Resolver) http.Handler {
+func InitHttpHandler(logger logging.Logger, rootQueryResolver resolver.FieldResolver) http.Handler {
 	return &httpHandler{logger, CreateGraphqlService(logger, rootQueryResolver)}
 }
 
@@ -33,8 +34,6 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	h.logger.Debug("get request")
 
 	ctx := r.Context()
 	span, ctx := logging.StartSpanFromContext(ctx, "http_request")

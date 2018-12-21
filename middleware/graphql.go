@@ -7,21 +7,19 @@ import (
 
 	"github.com/beinan/gql-server/concurrent/future"
 	"github.com/beinan/gql-server/logging"
+	"github.com/beinan/gql-server/resolver"
 	"github.com/vektah/gqlparser/ast"
 	"github.com/vektah/gqlparser/parser"
 )
 
 type Context = context.Context
 
-type Resolver interface {
-	ResolveQueryField(Context, *ast.Field) future.Future
-}
 type graphqlService struct {
 	logger            logging.Logger
-	rootQueryResolver Resolver
+	rootQueryResolver resolver.FieldResolver
 }
 
-func CreateGraphqlService(logger logging.Logger, rootQueryResolver Resolver) Service {
+func CreateGraphqlService(logger logging.Logger, rootQueryResolver resolver.FieldResolver) Service {
 	return graphqlService{
 		logger:            logger,
 		rootQueryResolver: rootQueryResolver,
@@ -31,12 +29,12 @@ func CreateGraphqlService(logger logging.Logger, rootQueryResolver Resolver) Ser
 func (g graphqlService) serve(ctx Context, request interface{}) future.Future {
 	gqlRequest := request.(GQLRequest)
 	doc, err := parser.ParseQuery(&ast.Source{Input: gqlRequest.Query})
-	results := make(map[string]future.Future)
+	var results resolver.Results
 	for _, op := range doc.Operations {
 		g.logger.Debug("Operation", "name:", op.Name, "Operation", op.Operation)
 		switch op.Operation {
 		case "query":
-			results = ResolveSelections(ctx, op.SelectionSet, g.rootQueryResolver)
+			results = resolver.ResolveSelections(ctx, op.SelectionSet, g.rootQueryResolver)
 		default:
 			future.MakeValue(nil, errors.New("unsupported opration"))
 		}
@@ -46,23 +44,4 @@ func (g graphqlService) serve(ctx Context, request interface{}) future.Future {
 		Data:  results,
 		Error: nil,
 	}, nil)
-}
-
-func ResolveSelections(
-	ctx Context,
-	sels ast.SelectionSet,
-	resolver Resolver,
-) map[string]future.Future {
-	results := make(map[string]future.Future)
-	for _, selection := range sels {
-		switch selection.(type) {
-		case *ast.Field:
-			field := selection.(*ast.Field)
-			result := resolver.ResolveQueryField(ctx, field)
-			results[field.Alias] = result
-		default:
-			panic("selection type not supported yet")
-		}
-	}
-	return results
 }

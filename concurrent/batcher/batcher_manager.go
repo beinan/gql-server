@@ -22,6 +22,7 @@ type BatcherMeta struct {
 
 func MakeBatcherManager() *BatcherManager {
 	return &BatcherManager{
+		//make an batcher meta array with 0 length and 20 cap
 		batcherMetas: make([]*BatcherMeta, 0, 20),
 	}
 }
@@ -37,7 +38,8 @@ func (b *BatcherManager) mkBatchMeta(batchFunc BatchFunc) *BatcherMeta {
 	return meta
 }
 
-//Goroutine safe, we recommmend you register all the batcher in main func/goroutine
+//tho this func isgoroutine safe,
+//we still recommmend you register all the batcher in main func/goroutine
 func (b *BatcherManager) Register(batchFunc BatchFunc) GetFunc {
 	batcherMeta := b.mkBatchMeta(batchFunc)
 	return func(ctx Context, id ID) future.Future {
