@@ -100,10 +100,13 @@ func TestGraphQLResolver(t *testing.T) {
 
 //generated test model and resolvers
 type Future = future.Future
-type Value = interface{}
 
-type IDResolver interface {
-	Id() Future
+type IDQuery struct {
+	id      ID
+	resolve func(Context, ID) Future
+}
+type IDQueryResolver interface {
+	Id() ID
 }
 
 type UserResolver interface {

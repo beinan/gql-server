@@ -1,0 +1,36 @@
+# github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd
+github.com/codahale/hdrhistogram
+# github.com/opentracing/opentracing-go v1.0.2
+github.com/opentracing/opentracing-go/log
+github.com/opentracing/opentracing-go
+github.com/opentracing/opentracing-go/ext
+# github.com/pkg/errors v0.8.0
+github.com/pkg/errors
+# github.com/uber/jaeger-client-go v2.14.0+incompatible
+github.com/uber/jaeger-client-go/config
+github.com/uber/jaeger-client-go
+github.com/uber/jaeger-client-go/internal/baggage/remote
+github.com/uber/jaeger-client-go/internal/throttler/remote
+github.com/uber/jaeger-client-go/rpcmetrics
+github.com/uber/jaeger-client-go/internal/baggage
+github.com/uber/jaeger-client-go/internal/spanlog
+github.com/uber/jaeger-client-go/internal/throttler
+github.com/uber/jaeger-client-go/log
+github.com/uber/jaeger-client-go/thrift
+github.com/uber/jaeger-client-go/thrift-gen/jaeger
+github.com/uber/jaeger-client-go/thrift-gen/sampling
+github.com/uber/jaeger-client-go/thrift-gen/zipkincore
+github.com/uber/jaeger-client-go/utils
+github.com/uber/jaeger-client-go/thrift-gen/baggage
+github.com/uber/jaeger-client-go/thrift-gen/agent
+# github.com/uber/jaeger-lib v1.5.0
+github.com/uber/jaeger-lib/metrics
+# github.com/urfave/cli v1.20.0
+github.com/urfave/cli
+# github.com/vektah/gqlparser v0.0.0-20180831041411-14e83ae06ec1
+github.com/vektah/gqlparser/ast
+github.com/vektah/gqlparser/parser
+github.com/vektah/gqlparser/gqlerror
+github.com/vektah/gqlparser/lexer
+# golang.org/x/net v0.0.0-20180925072008-f04abc6bdfa7
+golang.org/x/net/context
