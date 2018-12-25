@@ -36,12 +36,12 @@ func (r GqlUserResolver) resolveField(ctx Context, field *ast.Field) (GqlResultV
 	case "id":
 
 		//for immediate value
-		return r.resolver.Id().Value()
+		return r.resolver.Id(), nil
 
 	case "name":
 
 		//for immediate value
-		return r.resolver.Name().Value()
+		return r.resolver.Name(), nil
 
 	case "friends":
 

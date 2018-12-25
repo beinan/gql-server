@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -49,6 +50,7 @@ func MakeDAO() (dao *DAO, batcherAttacher middleware.HttpFilter) {
 }
 
 func getUsers(ctx Context, ids []ID) []Result {
+	fmt.Println("batch get users:", ids)
 	span, ctx := logging.StartSpanFromContext(ctx, "read_users_from_db")
 	span.LogFields(
 		log.String("ids", strings.Join(ids, ",")),

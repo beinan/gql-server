@@ -61,7 +61,7 @@ func (r Gql{{.Name}}Resolver) resolveField(ctx Context, field *ast.Field) (GqlRe
 		case "{{.Name}}":
 			{{if .Type | isImmediate}}
 				//for immediate value
-				return r.resolver.{{.Name | titlePipe}}().Value()
+				return r.resolver.{{.Name | titlePipe}}()
 			{{else}}
 				//for field with parameters 
        	span, ctx := logging.StartSpanFromContext(ctx, "{{$typename}} -- {{.Name}}")

@@ -2,8 +2,8 @@ package resolvers
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/beinan/gql-server/concurrent/future"
 	"github.com/beinan/gql-server/example/dao"
 	"github.com/beinan/gql-server/example/gen"
 	"github.com/beinan/gql-server/graphql"
@@ -22,7 +22,7 @@ type RootQueryResolver struct {
 }
 
 func (r *RootQueryResolver) GetUser(ctx Context, id ID) gen.UserResolver {
-
+	fmt.Println("Graphql Resolver: getUser:", id)
 	userFuture := r.dao.GetUser(ctx, id)
 
 	resolver := EnhancedUserResolver{
@@ -57,16 +57,13 @@ func (r EnhancedUserResolver) Friends(
 	userFutures, _ := r.dao.GetFriends(ctx, r.userId, start, pageSize)
 	resolvers := make([]gen.UserResolver, len(userFutures))
 	for i, userFuture := range userFutures {
-		resolverFuture := userFuture.Then(func(v future.Value) (future.Value, error) {
-			user := v.(User)
-			return EnhancedUserResolver{
-				r.dao,
-				user.Id,
-				gen.FutureUserResolver{Value: userFuture},
-			}, nil
-		})
-		resolver, _ := resolverFuture.Value()
-		resolvers[i] = resolver.(gen.UserResolver)
+		userResolver := EnhancedUserResolver{
+			r.dao,
+			r.userId,
+			gen.FutureUserResolver{Value: userFuture},
+		}
+
+		resolvers[i] = userResolver
 	}
 	return resolvers
 }
