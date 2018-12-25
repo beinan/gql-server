@@ -11,6 +11,7 @@ import (
 	"github.com/vektah/gqlparser/parser"
 )
 
+//GenConfig is the config for code generation
 type GenConfig struct {
 	SchemaPath       string
 	GenPath          string

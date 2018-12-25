@@ -19,7 +19,7 @@ type GQLResponse struct {
 	Error interface{} `json:"error"`
 }
 
-func InitHttpHandler(logger logging.Logger, rootQueryResolver resolver.FieldResolver) http.Handler {
+func InitHttpHandler(logger logging.Logger, rootQueryResolver resolver.GqlResolver) http.Handler {
 	return &httpHandler{logger, CreateGraphqlService(logger, rootQueryResolver)}
 }
 

@@ -13,6 +13,7 @@ import (
 
 //go:generate sh -c "gql-server gen model > ./gen/model.go"
 //go:generate sh -c "gql-server gen resolver > ./gen/resolver.go"
+//go:generate sh -c "gql-server gen gqlresolver > ./gen/gql_resolver.go"
 func main() {
 	var logger = logging.StandardLogger(logging.DEBUG)
 	defer logging.InitOpenTracing("gql-service").Close()
@@ -21,7 +22,7 @@ func main() {
 
 	dao, batcherAttacher := dao.MakeDAO()
 
-	rootQueryResolver := gen.GqlQueryResolver(resolvers.MkRootQueryResolver(dao))
+	rootQueryResolver := gen.MkGqlQueryResolver(resolvers.MkRootQueryResolver(dao))
 
 	graphqlHandler := middleware.InitHttpHandler(logger, rootQueryResolver)
 

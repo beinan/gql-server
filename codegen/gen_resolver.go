@@ -9,7 +9,7 @@ import (
 	"github.com/vektah/gqlparser/ast"
 )
 
-//gen resolver's functions
+//GenerateResolver : gen resolver's functions
 func GenerateResolver(cfg GenConfig, w io.Writer) error {
 	return generate(
 		cfg, w, executeResolverTmpl,
@@ -24,89 +24,46 @@ package gen
 
 import (
 	"github.com/beinan/gql-server/concurrent/future"
-	"github.com/beinan/gql-server/graphql"
-	"github.com/beinan/gql-server/logging"
 	. "github.com/beinan/gql-server/resolver"
-	"github.com/vektah/gqlparser/ast"
 )
 
 {{range .Definitions}}
 
-
 {{$typename := .Name}}
 
-func Gql{{$typename}}Resolver(r {{$typename}}Resolver) FieldResolver {
-	return func(
-		ctx Context,
-		field *graphql.Field,
-	) future.Future {
-	  switch field.Name {
-    {{range .Fields}}
-      case "{{.Name}}":
-      {{if .Type | isImmediate}}
-       //for immediate value
-       return r.{{.Name | titlePipe}}()
-    {{else}}
-      //for field with parameters 
-       span, ctx := logging.StartSpanFromContext(ctx, "{{$typename}} -- {{.Name}}")
-       defer span.Finish()
-
-       {{range .Arguments}}
-			   {{.Name}}Value, _ := field.Arguments.ForName("{{.Name}}").Value.Value(nil)
-			 {{end}}
-       fu := r.{{.Name | titlePipe}}(ctx, {{range .Arguments}}{{.Name}}Value.({{. | argTypePipe}}),{{end}})
-		   
-       {{if eq .Type.NamedType ""}}
-          //if it's array, resolver each element
-    			return HandleFuture{{.Type.Elem.NamedType}}ResolverArray(ctx, fu, field.SelectionSet)
-       {{else}}
-          //not array, using NamedType of the return type
-          return HandleFuture{{.Type.NamedType}}Resolver(ctx, fu, field.SelectionSet)
-       {{end}}
-    {{end}}
+type {{.Name}}Resolver interface {
+  {{range .Fields}}
+      {{.Name | titlePipe}}({{.| argumentPipe}}) {{.| resolverFieldTypePipe}}
   {{end}}
-	default:
-		panic("unsopported field")
-	}
-  }
 }
 
-func HandleFuture{{$typename}}Resolver(
-	ctx Context,
-	futureResolver Future,
-	sels ast.SelectionSet,
-) Future {
-	return futureResolver.Then(func(data Value) (Value, error) {
-		resolver := data.({{$typename}}Resolver)
-		result := ResolveSelections(ctx, sels, Gql{{$typename}}Resolver(resolver))
-		return result, nil
-	})
+type Future{{.Name}}Resolver struct{
+	Value future.Future // future of {{.Name}}
 }
 
-func HandleFuture{{$typename}}ResolverArray(
-	ctx Context,
-	futureResolverArray Future,
-	sels ast.SelectionSet,
-) Future {
-	return futureResolverArray.Then(func(data Value) (Value, error) {
-		resolverArray := data.([]{{$typename}}Resolver)
-		results := make([]Results, len(resolverArray))
-		for i, resolver := range resolverArray {
-			results[i] = ResolveSelections(ctx, sels, Gql{{$typename}}Resolver(resolver))
-		}
-		return results, nil
-	})
+{{$typename := .Name}}
+{{range .Fields}}
+func (this Future{{$typename}}Resolver) {{.Name | titlePipe}}({{.| argumentPipe}}) {{.| resolverFieldTypePipe}} {
+  {{if .Type | isImmediate}}
+    return this.Value.Then(func(value Value) (Value, error) {
+		  data := value.({{$typename}})
+		  return data.{{.Name | titlePipe}}, nil
+	  })
+  {{else}}
+	panic("{{.Name}} not implemented")
+  {{end}}
 }
 {{end}}
-
-
+{{end}}
 `
 
 func executeResolverTmpl(doc *ast.SchemaDocument) []byte {
 	funcMap := template.FuncMap{
-		"argTypePipe": argTypePipe,
-		"titlePipe":   strings.Title,
-		"isImmediate": isImmediate,
+		"resolverFieldTypePipe": resolverFieldTypePipe,
+		"argTypePipe":           argTypePipe,
+		"titlePipe":             strings.Title,
+		"argumentPipe":          argumentPipe,
+		"isImmediate":           isImmediate,
 	}
 	tmpl, err := template.New("resolver").Funcs(funcMap).Parse(resolverTmpl)
 	if err != nil {
@@ -115,19 +72,4 @@ func executeResolverTmpl(doc *ast.SchemaDocument) []byte {
 	var buf bytes.Buffer
 	tmpl.Execute(&buf, doc)
 	return buf.Bytes()
-}
-
-func isImmediate(t *ast.Type) bool {
-	n := t.NamedType
-	if n == "Int" || n == "Float" || n == "String" || n == "Boolean" || n == "ID" {
-		return true
-	}
-	return false
-}
-
-func argTypePipe(arg *ast.ArgumentDefinition) string {
-	if arg.DefaultValue != nil {
-		arg.Type.NonNull = true
-	}
-	return typeNamePipe(arg.Type)
 }

@@ -23,7 +23,15 @@ func TestGenerateResolver(t *testing.T) {
 	}
 }
 
+func TestGenerateGqlResolver(t *testing.T) {
+	err := GenerateGqlResolver(GenConfig{
+		SchemaPath: "../example/schema",
+	}, os.Stdout)
+	if err != nil {
+		t.Errorf("Parse query failed: %v", err)
+	}
+}
+
 func TestLoadSchema(t *testing.T) {
 	loadSchema("../example/schema")
-
 }

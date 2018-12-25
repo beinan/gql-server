@@ -4,23 +4,23 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-
-	"github.com/beinan/gql-server/concurrent/future"
 )
 
-type Result struct {
-	Alias       string
-	FutureValue future.Future
+//GqlResult represents a single field (alias & value pair)
+type GqlResult struct {
+	Alias string
+	Value GqlResultValue
 }
 
-type Results []Result
+//GqlResults represent a json object
+type GqlResults []GqlResult
 
-//result array to json object
-func (this Results) MarshalJSON() ([]byte, error) {
+//MarshalJSON : result array to json object
+func (results GqlResults) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString("{")
-	length := len(this)
-	for i, value := range this {
-		jsonValue, err := json.Marshal(value.FutureValue)
+	length := len(results)
+	for i, value := range results {
+		jsonValue, err := json.Marshal(value.Value)
 		if err != nil {
 			return nil, err
 		}

@@ -50,6 +50,15 @@ func main() {
 					},
 				},
 				{
+					Name:    "gqlresolver",
+					Aliases: []string{"gr"},
+					Usage:   "generate gql resolvers",
+					Action: func(c *cli.Context) error {
+						codegen.GenerateGqlResolver(config, os.Stdout)
+						return nil
+					},
+				},
+				{
 					Name:  "mock",
 					Usage: "generate mocks",
 					Action: func(c *cli.Context) error {

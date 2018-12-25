@@ -16,10 +16,10 @@ type Context = context.Context
 
 type graphqlService struct {
 	logger            logging.Logger
-	rootQueryResolver resolver.FieldResolver
+	rootQueryResolver resolver.GqlResolver
 }
 
-func CreateGraphqlService(logger logging.Logger, rootQueryResolver resolver.FieldResolver) Service {
+func CreateGraphqlService(logger logging.Logger, rootQueryResolver resolver.GqlResolver) Service {
 	return graphqlService{
 		logger:            logger,
 		rootQueryResolver: rootQueryResolver,
@@ -29,12 +29,12 @@ func CreateGraphqlService(logger logging.Logger, rootQueryResolver resolver.Fiel
 func (g graphqlService) serve(ctx Context, request interface{}) future.Future {
 	gqlRequest := request.(GQLRequest)
 	doc, err := parser.ParseQuery(&ast.Source{Input: gqlRequest.Query})
-	var results resolver.Results
+	var results resolver.GqlResults
 	for _, op := range doc.Operations {
 		g.logger.Debug("Operation", "name:", op.Name, "Operation", op.Operation)
 		switch op.Operation {
 		case "query":
-			results = resolver.ResolveSelections(ctx, op.SelectionSet, g.rootQueryResolver)
+			results = g.rootQueryResolver.Resolve(ctx, op.SelectionSet)
 		default:
 			future.MakeValue(nil, errors.New("unsupported opration"))
 		}

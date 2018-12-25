@@ -46,35 +46,35 @@ var resolver *MockResolver = &MockResolver{}
 
 type MockQueryResolver struct{}
 
-func (r *MockQueryResolver) GetUser(ctx Context, id ID) Future {
+func (r *MockQueryResolver) GetUser(ctx Context, id ID) UserResolver {
 	user := User{
 		Id:   id,
 		Name: graphql.NewStringOption("beinan"),
 	}
 	userResolver := &EnhancedUserResolver{
-		DefaultUserResolver{Value: future.MakeValue(user, nil)},
+		FutureUserResolver{Value: future.MakeValue(user, nil)},
 	}
-	return future.MakeValue(userResolver, nil)
+	return userResolver
 }
 
 var rootQueryResolver = &MockQueryResolver{}
 
 type EnhancedUserResolver struct {
-	DefaultUserResolver
+	FutureUserResolver
 }
 
-func (this EnhancedUserResolver) Friends(
-	ctx Context, start int64, pageSize int64) Future {
+func (r EnhancedUserResolver) Friends(
+	ctx Context, start int64, pageSize int64) []UserResolver {
 	user1 := User{
 		Id:   "friend1",
 		Name: graphql.NewStringOption("friend1's name"),
 	}
 	userResolver1 := &EnhancedUserResolver{
-		DefaultUserResolver{Value: future.MakeValue(user1, nil)},
+		FutureUserResolver{Value: future.MakeValue(user1, nil)},
 	}
 	resolvers := make([]UserResolver, 1)
 	resolvers[0] = userResolver1
-	return future.MakeValue(resolvers, nil)
+	return resolvers
 }
 
 func TestGraphQLResolver(t *testing.T) {
@@ -83,12 +83,12 @@ func TestGraphQLResolver(t *testing.T) {
 
 	ctx := context.Background()
 
-	var results Results
+	var results GqlResults
 	for _, op := range doc.Operations {
 		fmt.Println("Operation", "name:", op.Name, "Operation", op.Operation)
 		switch op.Operation {
 		case "query":
-			results = ResolveSelections(ctx, op.SelectionSet, GqlQueryResolver(rootQueryResolver))
+			results = MkGqlQueryResolver(rootQueryResolver).resolve(ctx, op.SelectionSet)
 		default:
 			future.MakeValue(nil, errors.New("unsupported opration"))
 		}
@@ -110,32 +110,32 @@ type IDQueryResolver interface {
 }
 
 type UserResolver interface {
-	Id() Future
-	Name() Future
-	Friends(ctx Context, start int64, pageSize int64) Future
+	Id() StringResolver
+	Name() StringResolver
+	Friends(ctx Context, start int64, pageSize int64) []UserResolver
 }
 
-type DefaultUserResolver struct {
+type FutureUserResolver struct {
 	Value future.Future // future of User
 }
 
-func (this DefaultUserResolver) Id() Future {
-	return this.Value.Then(func(value Value) (Value, error) {
+func (r FutureUserResolver) Id() StringResolver {
+	return r.Value.Then(func(value Value) (Value, error) {
 		user := value.(User)
 		return user.Id, nil
 	})
 }
 
-func (this DefaultUserResolver) Name() Future {
-	return this.Value.Then(func(value Value) (Value, error) {
+func (r FutureUserResolver) Name() StringResolver {
+	return r.Value.Then(func(value Value) (Value, error) {
 		user := value.(User)
 		return user.Name, nil
 	})
 }
 
-func (this DefaultUserResolver) Friends(
-	ctx Context, start int64, pageSize int64) Future {
-	return future.MakeValue(nil, errors.New("Friends not implemented"))
+func (r FutureUserResolver) Friends(
+	ctx Context, start int64, pageSize int64) []UserResolver {
+	panic("Friends not implemented")
 }
 
 type ID = string
@@ -151,96 +151,97 @@ type Query struct {
 }
 
 type QueryResolver interface {
-	GetUser(ctx Context, id ID) Future
+	GetUser(ctx Context, id ID) UserResolver
 }
 
-func GqlUserResolver(r UserResolver) FieldResolver {
-	return func(
-		ctx Context,
-		field *graphql.Field,
-	) future.Future {
-		switch field.Name {
+type GqlUserResolver struct {
+	resolver UserResolver
+}
 
-		case "id":
-
-			//for immediate value
-			return r.Id()
-
-		case "name":
-
-			//for immediate value
-			return r.Name()
-
-		case "friends":
-
-			//for future resolver value
-			span, ctx := logging.StartSpanFromContext(ctx, "friends")
-			defer span.Finish()
-
-			startValue, _ := field.Arguments.ForName("start").Value.Value(nil)
-
-			pageSizeValue, _ := field.Arguments.ForName("pageSize").Value.Value(nil)
-
-			fu := r.Friends(ctx, startValue.(int64), pageSizeValue.(int64))
-
-			//if it's array, resolver each element
-			return HandleFutureUserResolverArray(ctx, fu, field.SelectionSet)
-
-		default:
-			panic("unsopported field")
-		}
+func MkGqlUserResolver(resolver UserResolver) GqlUserResolver {
+	return GqlUserResolver{
+		resolver: resolver,
 	}
 }
 
-func GqlQueryResolver(r QueryResolver) FieldResolver {
-	return func(
-		ctx Context,
-		field *graphql.Field,
-	) future.Future {
-		switch field.Name {
-
-		case "getUser":
-
-			//for future resolver value
-			span, ctx := logging.StartSpanFromContext(ctx, "getUser")
-			defer span.Finish()
-
-			idValue, _ := field.Arguments.ForName("id").Value.Value(nil)
-
-			fu := r.GetUser(ctx, idValue.(ID))
-
-			//not array
-			return HandleFutureUserResolver(ctx, fu, field.SelectionSet)
-
-		default:
-			panic("unsopported field")
+func MkGqlUserResolvers(resolvers []UserResolver) []GqlResolver {
+	gqlResolvers := make([]GqlResolver, len(resolvers))
+	for i, resolver := range resolvers {
+		gqlResolvers[i] = GqlUserResolver{
+			resolver: resolver,
 		}
 	}
+	return gqlResolvers
 }
 
-func HandleFutureUserResolver(
-	ctx Context,
-	futureResolver Future,
-	sels ast.SelectionSet,
-) Future {
-	return futureResolver.Then(func(data Value) (Value, error) {
-		resolver := data.(UserResolver)
-		result := ResolveSelections(ctx, sels, GqlUserResolver(resolver))
-		return result, nil
-	})
+func (r GqlUserResolver) resolve(ctx Context, sel ast.SelectionSet) GqlResults {
+	return GqlResolveSelections(ctx, sel, r.resolveField)
 }
 
-func HandleFutureUserResolverArray(
-	ctx Context,
-	futureResolverArray Future,
-	sels ast.SelectionSet,
-) Future {
-	return futureResolverArray.Then(func(data Value) (Value, error) {
-		resolverArray := data.([]UserResolver)
-		results := make([]Results, len(resolverArray))
-		for i, resolver := range resolverArray {
-			results[i] = ResolveSelections(ctx, sels, GqlUserResolver(resolver))
-		}
-		return results, nil
-	})
+func (r GqlUserResolver) resolveField(ctx Context, field *ast.Field) (GqlResultValue, error) {
+	switch field.Name {
+	case "id":
+
+		//for immediate value
+		return r.resolver.Id().Value()
+
+	case "name":
+
+		//for immediate value
+		return r.resolver.Name().Value()
+
+	case "friends":
+
+		//for future resolver value
+		span, ctx := logging.StartSpanFromContext(ctx, "friends")
+		defer span.Finish()
+
+		startValue, _ := field.Arguments.ForName("start").Value.Value(nil)
+
+		pageSizeValue, _ := field.Arguments.ForName("pageSize").Value.Value(nil)
+
+		resolvers := r.resolver.Friends(ctx, startValue.(int64), pageSizeValue.(int64))
+		gqlResolvers := MkGqlUserResolvers(resolvers)
+		//if it's array, resolver each element
+		return GqlResolveValues(ctx, gqlResolvers, field.SelectionSet), nil
+
+	default:
+		panic("unsopported field")
+	}
+
+}
+
+type GqlQueryResolver struct {
+	resolver QueryResolver
+}
+
+func MkGqlQueryResolver(resolver QueryResolver) GqlQueryResolver {
+	return GqlQueryResolver{
+		resolver: resolver,
+	}
+}
+func (g GqlQueryResolver) resolve(ctx Context, sels ast.SelectionSet) GqlResults {
+	return GqlResolveSelections(ctx, sels, g.resolveQueryField)
+}
+
+func (g GqlQueryResolver) resolveQueryField(ctx Context, field *ast.Field) (GqlResultValue, error) {
+	switch field.Name {
+
+	case "getUser":
+
+		//for future resolver value
+		span, ctx := logging.StartSpanFromContext(ctx, "getUser")
+		defer span.Finish()
+
+		idValue, _ := field.Arguments.ForName("id").Value.Value(nil)
+
+		resolver := g.resolver.GetUser(ctx, idValue.(ID))
+		gqlResolver := MkGqlUserResolver(resolver)
+		//not array
+		return gqlResolver.resolve(ctx, field.SelectionSet), nil
+
+	default:
+		panic("unsopported field")
+	}
+
 }
