@@ -12,6 +12,10 @@ type Mutation {
   updateUserName(id:ID!, name: String!): User!
 }
 
+input UserInput {
+  name: String
+  email: String
+}
 schema {
   query: Query
   mutation: Mutation

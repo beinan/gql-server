@@ -30,62 +30,63 @@ import (
 )
 
 {{range .Definitions}}
+	{{if .IsCompositeType}} {{/* do not generate resolvers for input and leaf types */}}
+		{{$typename := .Name}}
 
-{{$typename := .Name}}
+		type Gql{{.Name}}Resolver struct {
+			resolver {{.Name}}Resolver
+		}
 
-type Gql{{.Name}}Resolver struct {
-	resolver {{.Name}}Resolver
-}
+		func MkGql{{.Name}}Resolver(resolver {{.Name}}Resolver) Gql{{.Name}}Resolver {
+			return Gql{{.Name}}Resolver{
+				resolver: resolver,
+			}
+		}
 
-func MkGql{{.Name}}Resolver(resolver {{.Name}}Resolver) Gql{{.Name}}Resolver {
-	return Gql{{.Name}}Resolver{
-		resolver: resolver,
-	}
-}
+		func MkGql{{.Name}}Resolvers(resolvers []{{.Name}}Resolver) []GqlResolver {
+			gqlResolvers := make([]GqlResolver, len(resolvers))
+			for i, resolver := range resolvers {
+				gqlResolvers[i] = MkGql{{.Name}}Resolver(resolver)
+			}
+			return gqlResolvers
+		}
 
-func MkGql{{.Name}}Resolvers(resolvers []{{.Name}}Resolver) []GqlResolver {
-	gqlResolvers := make([]GqlResolver, len(resolvers))
-	for i, resolver := range resolvers {
-		gqlResolvers[i] = MkGql{{.Name}}Resolver(resolver)
-	}
-	return gqlResolvers
-}
+		func (r Gql{{.Name}}Resolver) Resolve(ctx Context, sel ast.SelectionSet) GqlResults {
+			return GqlResolveSelections(ctx, sel, r.resolveField)
+		}
 
-func (r Gql{{.Name}}Resolver) Resolve(ctx Context, sel ast.SelectionSet) GqlResults {
-	return GqlResolveSelections(ctx, sel, r.resolveField)
-}
+		func (r Gql{{.Name}}Resolver) resolveField(ctx Context, field *ast.Field) GqlResultValue {
+			switch field.Name {
+				{{range .Fields}}
+				case "{{.Name}}":
+					{{if .Type | isImmediate}}
+						//for immediate value
+						return r.resolver.{{.Name | titlePipe}}()
+					{{else}}
+						//for field with parameters 
+						span, ctx := logging.StartSpanFromContext(ctx, "{{$typename}} -- {{.Name}}")
+						defer span.Finish()
 
-func (r Gql{{.Name}}Resolver) resolveField(ctx Context, field *ast.Field) GqlResultValue {
-	switch field.Name {
-		{{range .Fields}}
-		case "{{.Name}}":
-			{{if .Type | isImmediate}}
-				//for immediate value
-				return r.resolver.{{.Name | titlePipe}}()
-			{{else}}
-				//for field with parameters 
-       	span, ctx := logging.StartSpanFromContext(ctx, "{{$typename}} -- {{.Name}}")
-       	defer span.Finish()
-
-       	{{range .Arguments}}
-			   	{{.Name}}Value, _ := field.Arguments.ForName("{{.Name}}").Value.Value(nil)
-			 	{{end}}
-       	resolver := r.resolver.{{.Name | titlePipe}}(ctx, {{range .Arguments}}{{.Name}}Value.({{. | argTypePipe}}),{{end}})		   
-       {{if eq .Type.NamedType ""}}
-					//if it's array, resolver each element
-					gqlResolvers := MkGql{{.Type.Elem.NamedType}}Resolvers(resolver)
-    			return GqlResolveValues(ctx, gqlResolvers, field.SelectionSet)
-			 {{else}}
-					//not array, using NamedType of the return type
-					gqlResolver := MkGql{{.Type.NamedType}}Resolver(resolver)
-			 		return gqlResolver.Resolve(ctx, field.SelectionSet)
-       {{end}}
-			{{end}}
-		{{end}}
-		default:
-			panic("Unsupported field")
-	}
-}
+						{{range .Arguments}}
+							{{.Name}}Value, _ := field.Arguments.ForName("{{.Name}}").Value.Value(nil)
+						{{end}}
+						resolver := r.resolver.{{.Name | titlePipe}}(ctx, {{range .Arguments}}{{.Name}}Value.({{. | argTypePipe}}),{{end}})		   
+					{{if eq .Type.NamedType ""}}
+							//if it's array, resolver each element
+							gqlResolvers := MkGql{{.Type.Elem.NamedType}}Resolvers(resolver)
+							return GqlResolveValues(ctx, gqlResolvers, field.SelectionSet)
+					{{else}}
+							//not array, using NamedType of the return type
+							gqlResolver := MkGql{{.Type.NamedType}}Resolver(resolver)
+							return gqlResolver.Resolve(ctx, field.SelectionSet)
+					{{end}}
+					{{end}}
+				{{end}}
+				default:
+					panic("Unsupported field")
+			}
+		}
+	{{end}} {{/* end of type checking*/}}
 {{end}}
 
 

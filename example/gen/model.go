@@ -23,3 +23,9 @@ type Query struct {
 
 type Mutation struct {
 }
+
+type UserInput struct {
+	Name StringOption
+
+	Email StringOption
+}

@@ -28,32 +28,33 @@ import (
 )
 
 {{range .Definitions}}
+	{{if .IsCompositeType}} {{/* do not generate resolvers for input and leaf types */}}
+		{{$typename := .Name}}
 
-{{$typename := .Name}}
+		type {{.Name}}Resolver interface {
+			{{range .Fields}}
+					{{.Name | titlePipe}}({{.| argumentPipe}}) {{.| resolverFieldTypePipe}}
+			{{end}}
+		}
 
-type {{.Name}}Resolver interface {
-  {{range .Fields}}
-      {{.Name | titlePipe}}({{.| argumentPipe}}) {{.| resolverFieldTypePipe}}
-  {{end}}
-}
+		type Future{{.Name}}Resolver struct{
+			Value future.Future // future of {{.Name}}
+		}
 
-type Future{{.Name}}Resolver struct{
-	Value future.Future // future of {{.Name}}
-}
-
-{{$typename := .Name}}
-{{range .Fields}}
-func (this Future{{$typename}}Resolver) {{.Name | titlePipe}}({{.| argumentPipe}}) {{.| resolverFieldTypePipe}} {
-  {{if .Type | isImmediate}}
-    return this.Value.Then(func(value Value) (Value, error) {
-		  data := value.({{$typename}})
-		  return data.{{.Name | titlePipe}}, nil
-	  })
-  {{else}}
-	panic("{{.Name}} not implemented")
-  {{end}}
-}
-{{end}}
+		{{$typename := .Name}}
+		{{range .Fields}}
+		func (this Future{{$typename}}Resolver) {{.Name | titlePipe}}({{.| argumentPipe}}) {{.| resolverFieldTypePipe}} {
+			{{if .Type | isImmediate}}
+				return this.Value.Then(func(value Value) (Value, error) {
+					data := value.({{$typename}})
+					return data.{{.Name | titlePipe}}, nil
+				})
+			{{else}}
+			panic("{{.Name}} not implemented")
+			{{end}}
+		}
+		{{end}}
+	{{end}} {{/* end of type checking -- if .IsCompositeType */}}
 {{end}}
 `
 
