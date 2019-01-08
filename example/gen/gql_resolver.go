@@ -30,18 +30,18 @@ func (r GqlUserResolver) Resolve(ctx Context, sel ast.SelectionSet) GqlResults {
 	return GqlResolveSelections(ctx, sel, r.resolveField)
 }
 
-func (r GqlUserResolver) resolveField(ctx Context, field *ast.Field) (GqlResultValue, error) {
+func (r GqlUserResolver) resolveField(ctx Context, field *ast.Field) GqlResultValue {
 	switch field.Name {
 
 	case "id":
 
 		//for immediate value
-		return r.resolver.Id(), nil
+		return r.resolver.Id()
 
 	case "name":
 
 		//for immediate value
-		return r.resolver.Name(), nil
+		return r.resolver.Name()
 
 	case "friends":
 
@@ -57,7 +57,7 @@ func (r GqlUserResolver) resolveField(ctx Context, field *ast.Field) (GqlResultV
 
 		//if it's array, resolver each element
 		gqlResolvers := MkGqlUserResolvers(resolver)
-		return GqlResolveValues(ctx, gqlResolvers, field.SelectionSet), nil
+		return GqlResolveValues(ctx, gqlResolvers, field.SelectionSet)
 
 	default:
 		panic("Unsupported field")
@@ -86,7 +86,7 @@ func (r GqlQueryResolver) Resolve(ctx Context, sel ast.SelectionSet) GqlResults 
 	return GqlResolveSelections(ctx, sel, r.resolveField)
 }
 
-func (r GqlQueryResolver) resolveField(ctx Context, field *ast.Field) (GqlResultValue, error) {
+func (r GqlQueryResolver) resolveField(ctx Context, field *ast.Field) GqlResultValue {
 	switch field.Name {
 
 	case "getUser":
@@ -101,7 +101,7 @@ func (r GqlQueryResolver) resolveField(ctx Context, field *ast.Field) (GqlResult
 
 		//not array, using NamedType of the return type
 		gqlResolver := MkGqlUserResolver(resolver)
-		return gqlResolver.Resolve(ctx, field.SelectionSet), nil
+		return gqlResolver.Resolve(ctx, field.SelectionSet)
 
 	case "getUsers":
 
@@ -117,7 +117,53 @@ func (r GqlQueryResolver) resolveField(ctx Context, field *ast.Field) (GqlResult
 
 		//if it's array, resolver each element
 		gqlResolvers := MkGqlUserResolvers(resolver)
-		return GqlResolveValues(ctx, gqlResolvers, field.SelectionSet), nil
+		return GqlResolveValues(ctx, gqlResolvers, field.SelectionSet)
+
+	default:
+		panic("Unsupported field")
+	}
+}
+
+type GqlMutationResolver struct {
+	resolver MutationResolver
+}
+
+func MkGqlMutationResolver(resolver MutationResolver) GqlMutationResolver {
+	return GqlMutationResolver{
+		resolver: resolver,
+	}
+}
+
+func MkGqlMutationResolvers(resolvers []MutationResolver) []GqlResolver {
+	gqlResolvers := make([]GqlResolver, len(resolvers))
+	for i, resolver := range resolvers {
+		gqlResolvers[i] = MkGqlMutationResolver(resolver)
+	}
+	return gqlResolvers
+}
+
+func (r GqlMutationResolver) Resolve(ctx Context, sel ast.SelectionSet) GqlResults {
+	return GqlResolveSelections(ctx, sel, r.resolveField)
+}
+
+func (r GqlMutationResolver) resolveField(ctx Context, field *ast.Field) GqlResultValue {
+	switch field.Name {
+
+	case "updateUserName":
+
+		//for field with parameters
+		span, ctx := logging.StartSpanFromContext(ctx, "Mutation -- updateUserName")
+		defer span.Finish()
+
+		idValue, _ := field.Arguments.ForName("id").Value.Value(nil)
+
+		nameValue, _ := field.Arguments.ForName("name").Value.Value(nil)
+
+		resolver := r.resolver.UpdateUserName(ctx, idValue.(ID), nameValue.(string))
+
+		//not array, using NamedType of the return type
+		gqlResolver := MkGqlUserResolver(resolver)
+		return gqlResolver.Resolve(ctx, field.SelectionSet)
 
 	default:
 		panic("Unsupported field")

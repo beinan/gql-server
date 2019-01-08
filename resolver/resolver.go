@@ -24,7 +24,7 @@ type IDResolver interface {
 }
 
 //FieldResolver is a function to resolve a single field
-type FieldResolver = func(Context, *ast.Field) (GqlResultValue, error)
+type FieldResolver = func(Context, *ast.Field) GqlResultValue
 
 type Value = interface{}
 
@@ -47,7 +47,7 @@ func GqlResolveSelections(
 		switch selection.(type) {
 		case *ast.Field:
 			field := selection.(*ast.Field)
-			resultValue, _ := fieldResolver(ctx, field) //TODO: handle error
+			resultValue := fieldResolver(ctx, field) //TODO: handle error inside fieldResolver
 			results[i] = GqlResult{
 				Alias: field.Alias,
 				Value: resultValue,

@@ -20,3 +20,6 @@ type User struct {
 
 type Query struct {
 }
+
+type Mutation struct {
+}

@@ -4,11 +4,9 @@ import (
 	"net/http"
 
 	"github.com/beinan/gql-server/example/dao"
-	"github.com/beinan/gql-server/example/gen"
+	"github.com/beinan/gql-server/example/resolvers"
 	"github.com/beinan/gql-server/logging"
 	"github.com/beinan/gql-server/middleware"
-
-	"github.com/beinan/gql-server/example/resolvers"
 )
 
 //go:generate sh -c "gql-server gen model > ./gen/model.go"
@@ -22,9 +20,9 @@ func main() {
 
 	dao, batcherAttacher := dao.MakeDAO()
 
-	rootQueryResolver := gen.MkGqlQueryResolver(resolvers.MkRootQueryResolver(dao))
+	resolvers := resolvers.MkRootResolvers(dao)
 
-	graphqlHandler := middleware.InitHttpHandler(logger, rootQueryResolver)
+	graphqlHandler := middleware.InitHttpHandler(logger, resolvers)
 
 	http.Handle("/query", batcherAttacher(graphqlHandler))
 	logger.Info(http.ListenAndServe(":8888", nil))

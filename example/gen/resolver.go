@@ -64,3 +64,17 @@ func (this FutureQueryResolver) GetUsers(ctx Context, start int64, pageSize int6
 	panic("getUsers not implemented")
 
 }
+
+type MutationResolver interface {
+	UpdateUserName(ctx Context, id ID, name string) UserResolver
+}
+
+type FutureMutationResolver struct {
+	Value future.Future // future of Mutation
+}
+
+func (this FutureMutationResolver) UpdateUserName(ctx Context, id ID, name string) UserResolver {
+
+	panic("updateUserName not implemented")
+
+}

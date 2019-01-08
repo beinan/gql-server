@@ -8,6 +8,11 @@ type Query {
   getUsers(start: Int=0, pageSize: Int = 20): [User!]
 }
 
+type Mutation {
+  updateUserName(id:ID!, name: String!): User!
+}
+
 schema {
   query: Query
+  mutation: Mutation
 }

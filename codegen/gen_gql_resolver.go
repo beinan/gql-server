@@ -55,7 +55,7 @@ func (r Gql{{.Name}}Resolver) Resolve(ctx Context, sel ast.SelectionSet) GqlResu
 	return GqlResolveSelections(ctx, sel, r.resolveField)
 }
 
-func (r Gql{{.Name}}Resolver) resolveField(ctx Context, field *ast.Field) (GqlResultValue, error) {
+func (r Gql{{.Name}}Resolver) resolveField(ctx Context, field *ast.Field) GqlResultValue {
 	switch field.Name {
 		{{range .Fields}}
 		case "{{.Name}}":
@@ -74,11 +74,11 @@ func (r Gql{{.Name}}Resolver) resolveField(ctx Context, field *ast.Field) (GqlRe
        {{if eq .Type.NamedType ""}}
 					//if it's array, resolver each element
 					gqlResolvers := MkGql{{.Type.Elem.NamedType}}Resolvers(resolver)
-    			return GqlResolveValues(ctx, gqlResolvers, field.SelectionSet), nil
+    			return GqlResolveValues(ctx, gqlResolvers, field.SelectionSet)
 			 {{else}}
 					//not array, using NamedType of the return type
 					gqlResolver := MkGql{{.Type.NamedType}}Resolver(resolver)
-			 		return gqlResolver.Resolve(ctx, field.SelectionSet), nil
+			 		return gqlResolver.Resolve(ctx, field.SelectionSet)
        {{end}}
 			{{end}}
 		{{end}}

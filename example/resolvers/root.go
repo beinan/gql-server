@@ -2,14 +2,16 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/beinan/gql-server/concurrent/future"
 	"github.com/beinan/gql-server/example/dao"
 	"github.com/beinan/gql-server/example/gen"
 	"github.com/beinan/gql-server/graphql"
+	"github.com/beinan/gql-server/middleware"
 )
 
 type ID = string
+type Value = future.Value
 type StringOption = graphql.StringOption
 type User = gen.User
 type Context = context.Context
@@ -17,12 +19,40 @@ type Context = context.Context
 var db = make(map[string]*User)
 var friendDB = make(map[string][]string)
 
+//MkRootResolvers makes an instance of middleware.GQLResolvers as a root entry of all the custom resolvers
+func MkRootResolvers(dao *dao.DAO) middleware.GQLResolvers {
+	return middleware.GQLResolvers{
+		RootQueryResolver: gen.MkGqlQueryResolver(&RootQueryResolver{
+			dao: dao,
+		}),
+		RootMutationResolver: gen.MkGqlMutationResolver(&RootMutationResolver{
+			dao: dao,
+		}),
+	}
+}
+
+type RootMutationResolver struct {
+	dao *dao.DAO
+}
 type RootQueryResolver struct {
 	dao *dao.DAO
 }
 
+func (r *RootMutationResolver) UpdateUserName(ctx Context, id ID, name string) gen.UserResolver {
+	userFuture := r.dao.GetUser(ctx, id).Then(func(value future.Value) (Value, error) {
+		userValue := value.(User)
+		userValue.Name = graphql.NewStringOption(name)
+		return userValue, nil
+	})
+
+	resolver := EnhancedUserResolver{
+		r.dao,
+		id,
+		gen.FutureUserResolver{Value: userFuture},
+	}
+	return resolver
+}
 func (r *RootQueryResolver) GetUser(ctx Context, id ID) gen.UserResolver {
-	fmt.Println("Graphql Resolver: getUser:", id)
 	userFuture := r.dao.GetUser(ctx, id)
 
 	resolver := EnhancedUserResolver{
@@ -66,10 +96,4 @@ func (r EnhancedUserResolver) Friends(
 		resolvers[i] = userResolver
 	}
 	return resolvers
-}
-
-func MkRootQueryResolver(dao *dao.DAO) gen.QueryResolver {
-	return &RootQueryResolver{
-		dao: dao,
-	}
 }
