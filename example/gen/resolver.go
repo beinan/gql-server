@@ -12,6 +12,8 @@ type UserResolver interface {
 
 	Name() StringResolver
 
+	Email() StringResolver
+
 	Friends(ctx Context, start int64, pageSize int64) []UserResolver
 }
 
@@ -33,6 +35,15 @@ func (this FutureUserResolver) Name() StringResolver {
 	return this.Value.Then(func(value Value) (Value, error) {
 		data := value.(User)
 		return data.Name, nil
+	})
+
+}
+
+func (this FutureUserResolver) Email() StringResolver {
+
+	return this.Value.Then(func(value Value) (Value, error) {
+		data := value.(User)
+		return data.Email, nil
 	})
 
 }
@@ -67,6 +78,8 @@ func (this FutureQueryResolver) GetUsers(ctx Context, start int64, pageSize int6
 
 type MutationResolver interface {
 	UpdateUserName(ctx Context, id ID, name string) UserResolver
+
+	UpdateUser(ctx Context, id ID, userInput UserInput) UserResolver
 }
 
 type FutureMutationResolver struct {
@@ -76,5 +89,11 @@ type FutureMutationResolver struct {
 func (this FutureMutationResolver) UpdateUserName(ctx Context, id ID, name string) UserResolver {
 
 	panic("updateUserName not implemented")
+
+}
+
+func (this FutureMutationResolver) UpdateUser(ctx Context, id ID, userInput UserInput) UserResolver {
+
+	panic("updateUser not implemented")
 
 }

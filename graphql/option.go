@@ -2,89 +2,62 @@ package graphql
 
 import "encoding/json"
 
-type IntOption interface {
-	Get() int
-	IsSet() bool
-	GetOrElse(int) int
+type IntOption struct {
+	Value int
+	IsSet bool
 }
 
-type StringOption interface {
-	Get() string
-	IsSet() bool
-	GetOrElse(string) string
+type StringOption struct {
+	Value string
+	IsSet bool
 }
 
-type intOptionStruct struct {
-	value int
-	isSet bool
+type FloatOption struct {
+	Value float32
+	IsSet bool
 }
 
-func NewIntOption(v int) IntOption {
-	return intOptionStruct{
-		value: v,
-		isSet: true,
+type IDOption struct {
+	Value string
+	IsSet bool
+}
+
+type BooleanOption struct {
+	Value bool
+	IsSet bool
+}
+
+func (o StringOption) MarshalJSON() ([]byte, error) {
+	if o.IsSet {
+		return json.Marshal(o.Value)
 	}
+	return json.Marshal(nil)
 }
 
-var EmptyIntOption = intOptionStruct{
-	isSet: false,
-}
-
-func (o intOptionStruct) Get() int {
-	if !o.isSet {
-		panic("IntOption value not set.")
+func (o IntOption) MarshalJSON() ([]byte, error) {
+	if o.IsSet {
+		return json.Marshal(o.Value)
 	}
-	return o.value
+	return json.Marshal(nil)
 }
 
-func (o intOptionStruct) GetOrElse(v int) int {
-	if o.isSet {
-		return o.value
+func (o BooleanOption) MarshalJSON() ([]byte, error) {
+	if o.IsSet {
+		return json.Marshal(o.Value)
 	}
-	return v
+	return json.Marshal(nil)
 }
 
-func (o intOptionStruct) IsSet() bool {
-	return o.isSet
-}
-
-type stringOptionStruct struct {
-	value string
-	isSet bool
-}
-
-func NewStringOption(v string) StringOption {
-	return stringOptionStruct{
-		value: v,
-		isSet: true,
+func (o FloatOption) MarshalJSON() ([]byte, error) {
+	if o.IsSet {
+		return json.Marshal(o.Value)
 	}
+	return json.Marshal(nil)
 }
 
-var EmptyStringOption = stringOptionStruct{
-	isSet: false,
-}
-
-func (o stringOptionStruct) Get() string {
-	if !o.isSet {
-		panic("StringOption value not set.")
-	}
-	return o.value
-}
-
-func (o stringOptionStruct) GetOrElse(v string) string {
-	if o.isSet {
-		return o.value
-	}
-	return v
-}
-
-func (o stringOptionStruct) IsSet() bool {
-	return o.isSet
-}
-
-func (o stringOptionStruct) MarshalJSON() ([]byte, error) {
-	if o.isSet {
-		return json.Marshal(o.value)
+func (o IDOption) MarshalJSON() ([]byte, error) {
+	if o.IsSet {
+		return json.Marshal(o.Value)
 	}
 	return json.Marshal(nil)
 }

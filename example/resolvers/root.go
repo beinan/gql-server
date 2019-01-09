@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/beinan/gql-server/concurrent/future"
 	"github.com/beinan/gql-server/example/dao"
@@ -41,7 +42,7 @@ type RootQueryResolver struct {
 func (r *RootMutationResolver) UpdateUserName(ctx Context, id ID, name string) gen.UserResolver {
 	userFuture := r.dao.GetUser(ctx, id).Then(func(value future.Value) (Value, error) {
 		userValue := value.(User)
-		userValue.Name = graphql.NewStringOption(name)
+		userValue.Name = graphql.StringOption{Value: name}
 		return userValue, nil
 	})
 
@@ -52,6 +53,24 @@ func (r *RootMutationResolver) UpdateUserName(ctx Context, id ID, name string) g
 	}
 	return resolver
 }
+
+func (r *RootMutationResolver) UpdateUser(ctx Context, id ID, userInput gen.UserInput) gen.UserResolver {
+	userFuture := r.dao.GetUser(ctx, id).Then(func(value future.Value) (Value, error) {
+		userValue := value.(User)
+		userValue.Name = userInput.Name
+		userValue.Name = userInput.Email
+		fmt.Println("user name", userInput.Name)
+		return userValue, nil
+	})
+
+	resolver := EnhancedUserResolver{
+		r.dao,
+		id,
+		gen.FutureUserResolver{Value: userFuture},
+	}
+	return resolver
+}
+
 func (r *RootQueryResolver) GetUser(ctx Context, id ID) gen.UserResolver {
 	userFuture := r.dao.GetUser(ctx, id)
 

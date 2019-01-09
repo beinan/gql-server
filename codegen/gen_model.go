@@ -9,6 +9,7 @@ import (
 	"github.com/vektah/gqlparser/ast"
 )
 
+//GenerateModel generates the go code of model struct
 func GenerateModel(cfg GenConfig, w io.Writer) error {
 	return generate(
 		cfg, w, executeModelTmpl,
@@ -37,6 +38,34 @@ type {{.Name}} struct {
       {{.Name | titlePipe}} {{.| modelFieldTypePipe}}
     {{end}}
   {{end}}
+}
+
+type {{.Name}}Option struct {
+	Value {{.Name}}
+	IsSet bool
+}
+
+func Make{{.Name}}(data map[string]interface{}) {{.Name}} {
+	input := {{.Name}}{}
+	{{range .Fields}}
+		{{if .Type | isImmediate}}
+			{{if .Type.NonNull}}
+				input.{{.Name | titlePipe}} = data["{{.Name}}"].({{.| modelFieldTypePipe}})
+			{{else}}
+				if v, ok := data["{{.Name}}"]; ok {
+					input.{{.Name | titlePipe}} = {{.| modelFieldTypePipe}}{
+						Value: v.(string),
+						IsSet: ok,
+					}
+				} else {
+					input.{{.Name | titlePipe}} = {{.| modelFieldTypePipe}}{
+						IsSet: false,
+					}
+				}
+			{{end}}
+		{{end}}
+	{{end}}
+	return input
 }
 
 {{end}}

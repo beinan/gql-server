@@ -36,34 +36,32 @@ func typeNamePipe(t *ast.Type) string {
 	if t.NamedType != "" {
 		//non-array type
 		return goTypeNamePipe(t.NamedType, t.NonNull)
-	} else {
-		// array type
-		return "[]" + typeNamePipe(t.Elem)
 	}
+	// array type
+	return "[]" + typeNamePipe(t.Elem)
 }
 
 func goTypeNamePipe(name string, nonNull bool) string {
 	if nonNull {
 		return goNonNullTypeNamePipe(name)
-	} else {
-		return goNullableTypeNamePipe(name)
 	}
+	return goNullableTypeNamePipe(name)
 }
 
 func goNullableTypeNamePipe(name string) string {
 	switch name {
 	case "Int":
-		return "IntOption"
+		return "graphql.IntOption"
 	case "Float":
-		return "FloatOption"
+		return "graphql.FloatOption"
 	case "String":
-		return "StringOption"
+		return "graphql.StringOption"
 	case "Boolean":
-		return "BoolOption"
+		return "graphql.BoolOption"
 	case "ID":
-		return "IDOption"
+		return "graphql.IDOption"
 	default:
-		return "*" + name
+		return name + "Option"
 	}
 }
 
@@ -80,7 +78,7 @@ func goNonNullTypeNamePipe(name string) string {
 	case "ID":
 		return "ID"
 	default:
-		return "*" + name
+		return name
 	}
 }
 
@@ -114,10 +112,9 @@ func resolverFieldTypePipe(field *ast.FieldDefinition) string {
 	if t.NamedType != "" {
 		//non-array type
 		return t.NamedType + "Resolver"
-	} else {
-		// array type
-		return "[]" + t.Elem.NamedType + "Resolver"
 	}
+	// array type
+	return "[]" + t.Elem.NamedType + "Resolver"
 }
 func argTypePipe(arg *ast.ArgumentDefinition) string {
 	if arg.DefaultValue != nil {

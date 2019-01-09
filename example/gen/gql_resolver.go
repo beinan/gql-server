@@ -43,6 +43,11 @@ func (r GqlUserResolver) resolveField(ctx Context, field *ast.Field) GqlResultVa
 		//for immediate value
 		return r.resolver.Name()
 
+	case "email":
+
+		//for immediate value
+		return r.resolver.Email()
+
 	case "friends":
 
 		//for field with parameters
@@ -160,6 +165,22 @@ func (r GqlMutationResolver) resolveField(ctx Context, field *ast.Field) GqlResu
 		nameValue, _ := field.Arguments.ForName("name").Value.Value(nil)
 
 		resolver := r.resolver.UpdateUserName(ctx, idValue.(ID), nameValue.(string))
+
+		//not array, using NamedType of the return type
+		gqlResolver := MkGqlUserResolver(resolver)
+		return gqlResolver.Resolve(ctx, field.SelectionSet)
+
+	case "updateUser":
+
+		//for field with parameters
+		span, ctx := logging.StartSpanFromContext(ctx, "Mutation -- updateUser")
+		defer span.Finish()
+
+		idValue, _ := field.Arguments.ForName("id").Value.Value(nil)
+
+		userInputMap, _ := field.Arguments.ForName("userInput").Value.Value(nil)
+		userInputValue := MakeUserInput(userInputMap.(map[string]interface{}))
+		resolver := r.resolver.UpdateUser(ctx, idValue.(ID), userInputValue)
 
 		//not array, using NamedType of the return type
 		gqlResolver := MkGqlUserResolver(resolver)

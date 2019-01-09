@@ -15,17 +15,109 @@ type Future = future.Future
 type User struct {
 	Id ID
 
-	Name StringOption
+	Name graphql.StringOption
+
+	Email graphql.StringOption
+}
+
+type UserOption struct {
+	Value User
+	IsSet bool
+}
+
+func MakeUser(data map[string]interface{}) User {
+	input := User{}
+
+	input.Id = data["id"].(ID)
+
+	if v, ok := data["name"]; ok {
+		input.Name = graphql.StringOption{
+			Value: v.(string),
+			IsSet: ok,
+		}
+	} else {
+		input.Name = graphql.StringOption{
+			IsSet: false,
+		}
+	}
+
+	if v, ok := data["email"]; ok {
+		input.Email = graphql.StringOption{
+			Value: v.(string),
+			IsSet: ok,
+		}
+	} else {
+		input.Email = graphql.StringOption{
+			IsSet: false,
+		}
+	}
+
+	return input
 }
 
 type Query struct {
 }
 
+type QueryOption struct {
+	Value Query
+	IsSet bool
+}
+
+func MakeQuery(data map[string]interface{}) Query {
+	input := Query{}
+
+	return input
+}
+
 type Mutation struct {
 }
 
-type UserInput struct {
-	Name StringOption
+type MutationOption struct {
+	Value Mutation
+	IsSet bool
+}
 
-	Email StringOption
+func MakeMutation(data map[string]interface{}) Mutation {
+	input := Mutation{}
+
+	return input
+}
+
+type UserInput struct {
+	Name graphql.StringOption
+
+	Email graphql.StringOption
+}
+
+type UserInputOption struct {
+	Value UserInput
+	IsSet bool
+}
+
+func MakeUserInput(data map[string]interface{}) UserInput {
+	input := UserInput{}
+
+	if v, ok := data["name"]; ok {
+		input.Name = graphql.StringOption{
+			Value: v.(string),
+			IsSet: ok,
+		}
+	} else {
+		input.Name = graphql.StringOption{
+			IsSet: false,
+		}
+	}
+
+	if v, ok := data["email"]; ok {
+		input.Email = graphql.StringOption{
+			Value: v.(string),
+			IsSet: ok,
+		}
+	} else {
+		input.Email = graphql.StringOption{
+			IsSet: false,
+		}
+	}
+
+	return input
 }
