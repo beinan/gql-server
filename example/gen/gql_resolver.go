@@ -54,11 +54,15 @@ func (r GqlUserResolver) resolveField(ctx Context, field *ast.Field) GqlResultVa
 		span, ctx := logging.StartSpanFromContext(ctx, "User -- friends")
 		defer span.Finish()
 
-		startValue, _ := field.Arguments.ForName("start").Value.Value(nil)
+		startRawValue, _ := field.Arguments.ForName("start").Value.Value(nil)
 
-		pageSizeValue, _ := field.Arguments.ForName("pageSize").Value.Value(nil)
+		startValue := startRawValue.(int64)
 
-		resolver := r.resolver.Friends(ctx, startValue.(int64), pageSizeValue.(int64))
+		pageSizeRawValue, _ := field.Arguments.ForName("pageSize").Value.Value(nil)
+
+		pageSizeValue := pageSizeRawValue.(int64)
+
+		resolver := r.resolver.Friends(ctx, startValue, pageSizeValue)
 
 		//if it's array, resolver each element
 		gqlResolvers := MkGqlUserResolvers(resolver)
@@ -100,9 +104,11 @@ func (r GqlQueryResolver) resolveField(ctx Context, field *ast.Field) GqlResultV
 		span, ctx := logging.StartSpanFromContext(ctx, "Query -- getUser")
 		defer span.Finish()
 
-		idValue, _ := field.Arguments.ForName("id").Value.Value(nil)
+		idRawValue, _ := field.Arguments.ForName("id").Value.Value(nil)
 
-		resolver := r.resolver.GetUser(ctx, idValue.(ID))
+		idValue := idRawValue.(ID)
+
+		resolver := r.resolver.GetUser(ctx, idValue)
 
 		//not array, using NamedType of the return type
 		gqlResolver := MkGqlUserResolver(resolver)
@@ -114,11 +120,15 @@ func (r GqlQueryResolver) resolveField(ctx Context, field *ast.Field) GqlResultV
 		span, ctx := logging.StartSpanFromContext(ctx, "Query -- getUsers")
 		defer span.Finish()
 
-		startValue, _ := field.Arguments.ForName("start").Value.Value(nil)
+		startRawValue, _ := field.Arguments.ForName("start").Value.Value(nil)
 
-		pageSizeValue, _ := field.Arguments.ForName("pageSize").Value.Value(nil)
+		startValue := startRawValue.(int64)
 
-		resolver := r.resolver.GetUsers(ctx, startValue.(int64), pageSizeValue.(int64))
+		pageSizeRawValue, _ := field.Arguments.ForName("pageSize").Value.Value(nil)
+
+		pageSizeValue := pageSizeRawValue.(int64)
+
+		resolver := r.resolver.GetUsers(ctx, startValue, pageSizeValue)
 
 		//if it's array, resolver each element
 		gqlResolvers := MkGqlUserResolvers(resolver)
@@ -160,11 +170,15 @@ func (r GqlMutationResolver) resolveField(ctx Context, field *ast.Field) GqlResu
 		span, ctx := logging.StartSpanFromContext(ctx, "Mutation -- updateUserName")
 		defer span.Finish()
 
-		idValue, _ := field.Arguments.ForName("id").Value.Value(nil)
+		idRawValue, _ := field.Arguments.ForName("id").Value.Value(nil)
 
-		nameValue, _ := field.Arguments.ForName("name").Value.Value(nil)
+		idValue := idRawValue.(ID)
 
-		resolver := r.resolver.UpdateUserName(ctx, idValue.(ID), nameValue.(string))
+		nameRawValue, _ := field.Arguments.ForName("name").Value.Value(nil)
+
+		nameValue := nameRawValue.(string)
+
+		resolver := r.resolver.UpdateUserName(ctx, idValue, nameValue)
 
 		//not array, using NamedType of the return type
 		gqlResolver := MkGqlUserResolver(resolver)
@@ -176,11 +190,15 @@ func (r GqlMutationResolver) resolveField(ctx Context, field *ast.Field) GqlResu
 		span, ctx := logging.StartSpanFromContext(ctx, "Mutation -- updateUser")
 		defer span.Finish()
 
-		idValue, _ := field.Arguments.ForName("id").Value.Value(nil)
+		idRawValue, _ := field.Arguments.ForName("id").Value.Value(nil)
 
-		userInputMap, _ := field.Arguments.ForName("userInput").Value.Value(nil)
-		userInputValue := MakeUserInput(userInputMap.(map[string]interface{}))
-		resolver := r.resolver.UpdateUser(ctx, idValue.(ID), userInputValue)
+		idValue := idRawValue.(ID)
+
+		userInputRawValue, _ := field.Arguments.ForName("userInput").Value.Value(nil)
+
+		userInputValue := MakeUserInput(userInputRawValue.(map[string]interface{}))
+
+		resolver := r.resolver.UpdateUser(ctx, idValue, userInputValue)
 
 		//not array, using NamedType of the return type
 		gqlResolver := MkGqlUserResolver(resolver)

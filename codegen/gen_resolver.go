@@ -72,5 +72,6 @@ func executeResolverTmpl(doc *ast.SchemaDocument) []byte {
 	}
 	var buf bytes.Buffer
 	tmpl.Execute(&buf, doc)
+
 	return buf.Bytes()
 }

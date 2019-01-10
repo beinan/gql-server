@@ -38,7 +38,7 @@ func MakeDAO() (dao *DAO, batcherAttacher middleware.HttpFilter) {
 	makeTestUser := func(id string) User {
 		return User{
 			Id:   id,
-			Name: graphql.StringOption{Value: "User_" + id},
+			Name: graphql.StringOption{Value: "User_" + id, IsSet: true},
 		}
 	}
 	db["1"] = makeTestUser("1")

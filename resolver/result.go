@@ -31,4 +31,5 @@ func (results GqlResults) MarshalJSON() ([]byte, error) {
 	}
 	buffer.WriteString("}")
 	return buffer.Bytes(), nil
+
 }

@@ -9,4 +9,4 @@ RUN go install github.com/canthefason/go-watcher/cmd/watcher
 RUN go build
 RUN go install
 
-CMD watcher -run github.com/beinan/gql-server/example -watch github.com/beinan/gql-server
+CMD GOFLAGS=-mod=vendor watcher -run github.com/beinan/gql-server/example -watch github.com/beinan/gql-server

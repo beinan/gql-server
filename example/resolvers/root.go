@@ -58,8 +58,8 @@ func (r *RootMutationResolver) UpdateUser(ctx Context, id ID, userInput gen.User
 	userFuture := r.dao.GetUser(ctx, id).Then(func(value future.Value) (Value, error) {
 		userValue := value.(User)
 		userValue.Name = userInput.Name
-		userValue.Name = userInput.Email
-		fmt.Println("user name", userInput.Name)
+		userValue.Email = userInput.Email
+		fmt.Println("user name", userInput, userValue)
 		return userValue, nil
 	})
 

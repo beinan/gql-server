@@ -68,9 +68,14 @@ import (
 						defer span.Finish()
 
 						{{range .Arguments}}
-							{{.Name}}Value, _ := field.Arguments.ForName("{{.Name}}").Value.Value(nil)
+							{{.Name}}RawValue, _ := field.Arguments.ForName("{{.Name}}").Value.Value(nil)
+							{{if .Type | isImmediate}}
+								{{.Name}}Value := {{.Name}}RawValue.({{. | argTypePipe}})
+							{{else}}
+								{{.Name}}Value := Make{{.Type.Name}}({{.Name}}RawValue.(map[string]interface{}))
+							{{end}}
 						{{end}}
-						resolver := r.resolver.{{.Name | titlePipe}}(ctx, {{range .Arguments}}{{.Name}}Value.({{. | argTypePipe}}),{{end}})		   
+						resolver := r.resolver.{{.Name | titlePipe}}(ctx, {{range .Arguments}}{{.Name}}Value,{{end}})		   
 					{{if eq .Type.NamedType ""}}
 							//if it's array, resolver each element
 							gqlResolvers := MkGql{{.Type.Elem.NamedType}}Resolvers(resolver)
