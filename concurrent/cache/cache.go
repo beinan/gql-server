@@ -29,13 +29,13 @@ func (c *Cache) LoadOrElse(
 	if value, ok := c.Load(key); ok {
 		return value
 	}
-	c.Lock() //lock for write
+	c.Lock()         //lock for write
+	defer c.Unlock() //write unlock
 	if value, ok := c.data[key]; ok {
 		return value
 	}
 	value := future.MakeFuture(producer)
 	c.data[key] = value
-	c.Unlock() //write unlock
 	return value
 }
 
